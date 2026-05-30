@@ -1,0 +1,966 @@
+{
+  "info": {
+    "_postman_id": "a9a6b987-1234-4bc6-88ef-584a2cb5d0bf",
+    "name": "SiTukang API Collection",
+    "description": "Postman Collection for testing the SiTukang (formerly HandyDirect) API backend. Supports dynamic auth using {{accessToken}} and customizable {{baseUrl}} environment variable.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Part A — General & Authentication",
+      "item": [
+        {
+          "name": "Register Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Budi Santoso\",\n  \"email\": \"budi@email.com\",\n  \"phone\": \"+6281234567890\",\n  \"password\": \"SecureP@ss123\",\n  \"password_confirmation\": \"SecureP@ss123\",\n  \"role\": \"user\",\n  \"latitude\": -7.257500,\n  \"longitude\": 112.752100,\n  \"address\": \"Jl. Merdeka No. 12, Surabaya\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Register a new account (user or worker)."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.access_token) {",
+                  "    pm.collectionVariables.set(\"accessToken\", jsonData.data.access_token);",
+                  "    pm.collectionVariables.set(\"refreshToken\", jsonData.data.refresh_token);",
+                  "    console.log(\"Saved accessToken and refreshToken to collection variables.\");",
+                  "}"
+                ],
+                "type": "javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"budi@email.com\",\n  \"password\": \"SecureP@ss123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login to obtain JWT access token. Automatically saves access token to collection variable."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.access_token) {",
+                  "    pm.collectionVariables.set(\"accessToken\", jsonData.data.access_token);",
+                  "    pm.collectionVariables.set(\"refreshToken\", jsonData.data.refresh_token);",
+                  "}"
+                ],
+                "type": "javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Rotate and refresh JWT access token using dynamic refreshToken."
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"budi@email.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "description": "Request reset password email."
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"reset-token-from-email\",\n  \"password\": \"NewSecureP@ss456\",\n  \"password_confirmation\": \"NewSecureP@ss456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ]
+            },
+            "description": "Submit new password using token from reset email."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Logout and revoke JWT."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Part B — User Profile",
+      "item": [
+        {
+          "name": "Get Profile Me",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "description": "Get current profile info."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile Me",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Budi Santoso\",\n  \"phone\": \"+6281234567890\",\n  \"address\": \"Jl. Merdeka No. 14, Surabaya\",\n  \"latitude\": -7.257600,\n  \"longitude\": 112.752200\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "description": "Update user details."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Avatar",
+          "request": {
+            "method": "PUT",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "avatar",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me/avatar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "avatar"
+              ]
+            },
+            "description": "Upload avatar image file."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Location",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": -7.257500,\n  \"longitude\": 112.752100,\n  \"address\": \"Jl. Merdeka No. 12, Surabaya\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me/location",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "location"
+              ]
+            },
+            "description": "Update coordinates."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Part C — User (Customer) Endpoints",
+      "item": [
+        {
+          "name": "Get User Home Summary",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/home?latitude=-7.257500&longitude=112.752100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "home"
+              ],
+              "query": [
+                {
+                  "key": "latitude",
+                  "value": "-7.257500"
+                },
+                {
+                  "key": "longitude",
+                  "value": 112.752100
+                }
+              ]
+            },
+            "description": "Get home banner & suggestions."
+          },
+          "response": []
+        },
+        {
+          "name": "List Categories",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/categories?page=1&per_page=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Services in Category",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/categories/cat-04/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories",
+                "cat-04",
+                "services"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Nearby Workers",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/workers/nearby?latitude=-7.257500&longitude=112.752100&radius_km=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "latitude",
+                  "value": "-7.257500"
+                },
+                {
+                  "key": "longitude",
+                  "value": "112.752100"
+                },
+                {
+                  "key": "radius_km",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Workers",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/workers/search?q=pipa&latitude=-7.257500&longitude=112.752100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workers",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "pipa"
+                },
+                {
+                  "key": "latitude",
+                  "value": "-7.257500"
+                },
+                {
+                  "key": "longitude",
+                  "value": "112.752100"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"worker_id\": \"w-001\",\n  \"service_id\": \"svc-001\",\n  \"address\": \"Jl. Merdeka No. 12, Surabaya\",\n  \"latitude\": -7.257500,\n  \"longitude\": 112.752100,\n  \"urgency\": \"normal\",\n  \"problem_description\": \"Pipa bocor di bawah wastafel dapur menyebabkan air tergenang.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Orders (Customer)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order Detail",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/orders/:orderId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                ":orderId"
+              ],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "ord-005"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cancel_reason\": \"changed_mind\",\n  \"notes\": \"Batal karena ada urusan mendadak keluar kota\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/:orderId/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                ":orderId",
+                "cancel"
+              ],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "ord-005"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Purchases for Approval",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/orders/:orderId/purchases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                ":orderId",
+                "purchases"
+              ],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "ord-005"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Purchase",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/orders/:orderId/purchases/:purchaseId/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                ":orderId",
+                "purchases",
+                ":purchaseId",
+                "approve"
+              ],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "ord-005"
+                },
+                {
+                  "key": "purchaseId",
+                  "value": "pur-201"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Payment Proof (Initiate Payment)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method\": \"bank_transfer\",\n  \"payment_proof_url\": \"https://cdn.situkang.id/receipts/proof_bca_123.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/:orderId/payment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                ":orderId",
+                "payment"
+              ],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "ord-005"
+                }
+              ]
+            },
+            "description": "Initiate payment and obtain transaction token + interactive sandbox redirect_url."
+          },
+          "response": []
+        },
+        {
+          "name": "Simulate Sandbox Payment Callback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"9f9a4a7b-3b3d-4c3e-8c3d-3b3d4c3e8c3d\",\n  \"status\": \"success\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/sandbox-callback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "sandbox-callback"
+              ]
+            },
+            "description": "Simulate the payment gateway callback webhook (instantly updates GORM payment, completes order, and credits worker wallet)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Part D — Worker Endpoints",
+      "item": [
+        {
+          "name": "Get Worker Home Summary",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/worker/home",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "home"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Toggle Availability",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_available\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/availability",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "availability"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Incoming Orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/worker/orders/incoming",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "orders",
+                "incoming"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Accept Order (Worker)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/worker/orders/:orderId/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "orders",
+                ":orderId",
+                "accept"
+              ],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "ord-005"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Order Status (Arrived/In Progress)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/orders/:orderId/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "orders",
+                ":orderId",
+                "status"
+              ],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "ord-005"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Purchase Item Manual",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"item_name\": \"Pipa PVC 1/2 Inch\",\n  \"category\": \"material\",\n  \"quantity\": 2,\n  \"unit\": \"meter\",\n  \"unit_price\": 25000,\n  \"total_price\": 50000,\n  \"reason\": \"Untuk mengganti pipa P-trap yang pecah di bawah wastafel\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/orders/:orderId/purchases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "orders",
+                ":orderId",
+                "purchases"
+              ],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "ord-005"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "AI Process Raw Purchase Text",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"raw_input\": \"beli pipa 2 meter sama lem pvc trus ongkos ojek\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/orders/:orderId/purchases/ai-process",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "orders",
+                ":orderId",
+                "purchases",
+                "ai-process"
+              ],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "ord-005"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Wallet & Saldo Info",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/worker/wallet",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "wallet"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Periodic Location Updates",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": -6.188000,\n  \"longitude\": 106.832000,\n  \"heading\": 180.0,\n  \"speed_kmh\": 30,\n  \"accuracy_meters\": 5.0,\n  \"order_id\": \"ord-012\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/location",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "location"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "your_jwt_access_token_here",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "your_jwt_refresh_token_here",
+      "type": "string"
+    }
+  ]
+}

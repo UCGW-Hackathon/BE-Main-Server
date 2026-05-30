@@ -1,0 +1,1616 @@
+openapi: 3.0.0
+info:
+  title: SiTukang API
+  description: |
+    Complete API Documentation for SiTukang - A Single Backend for Customers and Workers.
+    Authentication is handled via RBAC with JWT access tokens.
+  version: 1.0.0
+servers:
+  - url: https://xryz-gcw-situkang.hf.space/v1
+    description: Production Server (Hugging Face)
+  - url: http://localhost:8080/v1
+    description: Local Development Server
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ==========================================
+  # PART A: Authentication & General
+  # ==========================================
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a new account
+      description: Register a new customer (user) or worker.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [full_name, email, phone, password, password_confirmation, role]
+              properties:
+                full_name: { type: string, example: Budi Santoso }
+                email: { type: string, format: email, example: budi@email.com }
+                phone: { type: string, example: "+6281234567890" }
+                password: { type: string, format: password, example: SecureP@ss123 }
+                password_confirmation: { type: string, format: password, example: SecureP@ss123 }
+                role: { type: string, enum: [user, worker], example: user }
+                latitude: { type: number, example: -7.257500 }
+                longitude: { type: number, example: 112.752100 }
+                address: { type: string, example: "Jl. Merdeka No. 12, Surabaya" }
+      responses:
+        '201':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login to account
+      description: Authenticate user or worker and receive JWT access token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, example: budi@email.com }
+                password: { type: string, format: password, example: SecureP@ss123 }
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh JWT token
+      description: Rotate and refresh access token using refresh token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string, example: dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4... }
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout
+      description: Invalidate active refresh token.
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: Berhasil logout }
+
+  /auth/forgot-password:
+    post:
+      tags: [Authentication]
+      summary: Forgot password request
+      description: Send password reset link to user email.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email, example: budi@email.com }
+      responses:
+        '200':
+          description: Reset link sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: Link reset password telah dikirim ke email Anda }
+
+  /auth/reset-password:
+    post:
+      tags: [Authentication]
+      summary: Reset password
+      description: Reset password using token from email.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password, password_confirmation]
+              properties:
+                token: { type: string, example: reset-token-from-email }
+                password: { type: string, example: NewSecureP@ss456 }
+                password_confirmation: { type: string, example: NewSecureP@ss456 }
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: Password berhasil direset }
+
+  # ==========================================
+  # PART B: User Profile
+  # ==========================================
+  /users/me:
+    get:
+      tags: [User Profile]
+      summary: Get own profile
+      description: Retrieve own profile details.
+      responses:
+        '200':
+          description: Profile retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  data: { $ref: '#/components/schemas/UserProfile' }
+    put:
+      tags: [User Profile]
+      summary: Update profile
+      description: Update profile details.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                full_name: { type: string, example: Budi Santoso }
+                phone: { type: string, example: "+6281234567890" }
+                address: { type: string, example: "Jl. Merdeka No. 14, Surabaya" }
+                latitude: { type: number, example: -7.257600 }
+                longitude: { type: number, example: 112.752200 }
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: Profil berhasil diperbarui }
+
+  /users/me/avatar:
+    put:
+      tags: [User Profile]
+      summary: Upload avatar
+      description: Upload profile photo.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [avatar]
+              properties:
+                avatar: { type: string, format: binary, description: Image file (jpg/png, max 5MB) }
+      responses:
+        '200':
+          description: Avatar uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: Foto profil berhasil diperbarui }
+                  data:
+                    type: object
+                    properties:
+                      avatar_url: { type: string, example: "https://cdn.situkang.id/avatars/budi_001_v2.jpg" }
+
+  /users/me/location:
+    put:
+      tags: [User Profile]
+      summary: Update current location
+      description: Update coordinates and address.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [latitude, longitude]
+              properties:
+                latitude: { type: number, example: -7.257500 }
+                longitude: { type: number, example: 112.752100 }
+                address: { type: string, example: "Jl. Merdeka No. 12, Surabaya" }
+      responses:
+        '200':
+          description: Location updated
+
+  # ==========================================
+  # PART C: Customer (User) Endpoints
+  # ==========================================
+  /home:
+    get:
+      tags: [Customer Home]
+      summary: Get User Home summary
+      description: Fetch categories, suggests, active order banner, promo, and featured workers.
+      parameters:
+        - name: latitude
+          in: query
+          required: true
+          schema: { type: number }
+        - name: longitude
+          in: query
+          required: true
+          schema: { type: number }
+      responses:
+        '200':
+          description: Summary retrieved
+
+  /categories:
+    get:
+      tags: [Customer Services]
+      summary: List Categories
+      description: Retrieve service categories.
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: Categories retrieved
+
+  /categories/{category_id}/services:
+    get:
+      tags: [Customer Services]
+      summary: Services in Category
+      description: Retrieve all active services within a specific category.
+      parameters:
+        - name: category_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Services retrieved
+
+  /workers/nearby:
+    get:
+      tags: [Customer Workers]
+      summary: Find Nearby Workers
+      description: Search and filter workers closest to user's location.
+      parameters:
+        - name: latitude
+          in: query
+          required: true
+          schema: { type: number }
+        - name: longitude
+          in: query
+          required: true
+          schema: { type: number }
+        - name: radius_km
+          in: query
+          schema: { type: number, default: 10 }
+        - name: category_id
+          in: query
+          schema: { type: string }
+        - name: service_id
+          in: query
+          schema: { type: string }
+        - name: min_rating
+          in: query
+          schema: { type: number }
+        - name: sort_by
+          in: query
+          schema: { type: string, enum: [distance, rating, price, completed_jobs], default: distance }
+        - name: sort_order
+          in: query
+          schema: { type: string, enum: [asc, desc], default: asc }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Workers retrieved
+
+  /workers/search:
+    get:
+      tags: [Customer Workers]
+      summary: Search Workers
+      description: Search workers by keyword (name, specialization, damage type).
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+        - name: latitude
+          in: query
+          required: true
+          schema: { type: number }
+        - name: longitude
+          in: query
+          required: true
+          schema: { type: number }
+        - name: radius_km
+          in: query
+          schema: { type: number }
+        - name: page
+          in: query
+          schema: { type: integer }
+        - name: per_page
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Search results retrieved
+
+  /workers/{worker_id}:
+    get:
+      tags: [Customer Workers]
+      summary: Worker Detailed Profile
+      description: Retrieve details of a specific worker.
+      parameters:
+        - name: worker_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Worker detail retrieved
+
+  /workers/{worker_id}/reviews:
+    get:
+      tags: [Customer Workers]
+      summary: Worker Reviews
+      description: List rating reviews given to a worker.
+      parameters:
+        - name: worker_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Worker reviews retrieved
+
+  /workers/{worker_id}/services:
+    get:
+      tags: [Customer Workers]
+      summary: Worker Custom Services
+      description: List custom services offered by a worker.
+      parameters:
+        - name: worker_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Worker custom services retrieved
+
+  /orders:
+    post:
+      tags: [Customer Orders]
+      summary: Create Order
+      description: Customer places a new match booking request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [worker_id, service_id, address, latitude, longitude, problem_description]
+              properties:
+                worker_id: { type: string }
+                service_id: { type: string }
+                address: { type: string }
+                latitude: { type: number }
+                longitude: { type: number }
+                urgency: { type: string, enum: [normal, urgent], default: normal }
+                problem_description: { type: string }
+                photos: { type: array, items: { type: string } }
+      responses:
+        '201':
+          description: Order created
+    get:
+      tags: [Customer Orders]
+      summary: List Orders
+      description: Get active/history orders of customer.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer }
+        - name: per_page
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Orders list retrieved
+
+  /orders/{order_id}:
+    get:
+      tags: [Customer Orders]
+      summary: Get Order Detail
+      description: Get detail data of an order.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Order details retrieved
+
+  /orders/{order_id}/cancel:
+    post:
+      tags: [Customer Orders]
+      summary: Cancel Order
+      description: Cancel order booking.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cancel_reason]
+              properties:
+                cancel_reason: { type: string, enum: [changed_mind, found_other_worker, too_long, other] }
+                notes: { type: string }
+      responses:
+        '200':
+          description: Order cancelled successfully
+
+  /orders/{order_id}/tracking:
+    get:
+      tags: [Customer Tracking]
+      summary: Tracking Info
+      description: Get live order steps tracking logs.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Tracking logs retrieved
+
+  /orders/{order_id}/tracking/location:
+    get:
+      tags: [Customer Tracking]
+      summary: Live Worker Location (Poll)
+      description: Get worker's current coordinates.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Worker location retrieved
+
+  /orders/{order_id}/purchases:
+    get:
+      tags: [Customer Purchases]
+      summary: List Purchases
+      description: List material/tool additions of the job.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Purchases list retrieved
+
+  /orders/{order_id}/purchases/{purchase_id}:
+    get:
+      tags: [Customer Purchases]
+      summary: Purchase Detail
+      description: Retrieve detail of a single purchase item.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: purchase_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Purchase detail retrieved
+
+  /orders/{order_id}/purchases/{purchase_id}/approve:
+    patch:
+      tags: [Customer Purchases]
+      summary: Approve Purchase
+      description: Approve a submitted purchase item.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: purchase_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Purchase approved
+
+  /orders/{order_id}/purchases/{purchase_id}/reject:
+    patch:
+      tags: [Customer Purchases]
+      summary: Reject Purchase
+      description: Reject a submitted purchase item.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: purchase_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reject_reason]
+              properties:
+                reject_reason: { type: string }
+      responses:
+        '200':
+          description: Purchase rejected
+
+  /orders/{order_id}/purchases/{purchase_id}/clarify:
+    patch:
+      tags: [Customer Purchases]
+      summary: Request Clarification
+      description: Request clarify details about a purchase.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: purchase_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question: { type: string }
+      responses:
+        '200':
+          description: Clarification requested
+
+  /orders/{order_id}/purchases/bulk-approve:
+    patch:
+      tags: [Customer Purchases]
+      summary: Bulk Approve Purchases
+      description: Approve multiple draft purchases together.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [purchase_ids]
+              properties:
+                purchase_ids: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: Purchases approved in bulk
+
+  /orders/{order_id}/chat/messages:
+    get:
+      tags: [Customer Chat]
+      summary: Chat History
+      description: Get message history for the order chat thread.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: before_id
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Messages retrieved
+    post:
+      tags: [Customer Chat]
+      summary: Send Message
+      description: Send chat message (text or image).
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message_type, content]
+              properties:
+                message_type: { type: string, enum: [text, image] }
+                content: { type: string }
+      responses:
+        '201':
+          description: Message sent
+
+  /orders/{order_id}/chat/read:
+    patch:
+      tags: [Customer Chat]
+      summary: Mark Chat Read
+      description: Mark incoming unread messages as read.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Messages marked read
+
+  /chats:
+    get:
+      tags: [Customer Chat]
+      summary: List Conversations
+      description: List active customer chats.
+      responses:
+        '200':
+          description: Active chats list retrieved
+
+  /orders/{order_id}/rating:
+    post:
+      tags: [Customer Rating]
+      summary: Rate Worker
+      description: Rate worker job completion.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating, review_text]
+              properties:
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                review_text: { type: string }
+                photos: { type: array, items: { type: string } }
+      responses:
+        '201':
+          description: Rating submitted successfully
+    get:
+      tags: [Customer Rating]
+      summary: Get Worker Rating
+      description: Get review details submitted by user.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Review detail retrieved
+
+  /orders/{order_id}/invoice:
+    get:
+      tags: [Customer Payments]
+      summary: Get Invoice
+      description: Get billing details invoice.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Invoice retrieved
+
+  /orders/{order_id}/payment:
+    post:
+      tags: [Customer Payments]
+      summary: Confirm Payment
+      description: Pay invoice by cash, e-wallet, or bank transfer.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payment_method]
+              properties:
+                payment_method: { type: string, enum: [cash, bank_transfer, ewallet] }
+                transaction_proof_url: { type: string }
+      responses:
+        '200':
+          description: Payment transaction complete
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  data:
+                    type: object
+                    properties:
+                      payment_id: { type: string, example: "9f9a4a7b-3b3d-4c3e-8c3d-3b3d4c3e8c3d" }
+                      order_id: { type: string, example: "8e8a4a7b-2b2d-3c3e-7c3d-2b2d3c3e7c3d" }
+                      invoice_id: { type: string, example: "7d7a4a7b-1b1d-2c2e-6c6d-1b1d2c2e6c6d" }
+                      amount: { type: integer, example: 150000 }
+                      payment_status: { type: string, example: "pending" }
+                      token: { type: string, example: "PAY-REF-ab12cd34" }
+                      redirect_url: { type: string, example: "http://localhost:8080/v1/payments/sandbox-checkout?payment_id=9f9a4a7b-3b3d-4c3e-8c3d-3b3d4c3e8c3d" }
+                      created_at: { type: string, format: date-time, example: "2026-05-30T10:15:30Z" }
+
+  /orders/{order_id}/invoice/pdf:
+    get:
+      tags: [Customer Payments]
+      summary: Download Invoice PDF
+      description: Stream invoice PDF binary.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: PDF byte stream
+
+  /payments/sandbox-checkout:
+    get:
+      tags: [Sandbox Payment Gateway]
+      summary: Render Sandbox Checkout Page
+      description: Serves an interactive mock payment completion screen in browser.
+      parameters:
+        - name: payment_id
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: HTML Checkout Page
+          content:
+            text/html:
+              schema: { type: string }
+
+  /payments/sandbox-callback:
+    post:
+      tags: [Sandbox Payment Gateway]
+      summary: Sandbox Payment Gateway Callback
+      description: Webhook simulation that instantly processes checkout status transitions.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payment_id, status]
+              properties:
+                payment_id: { type: string, example: "9f9a4a7b-3b3d-4c3e-8c3d-3b3d4c3e8c3d" }
+                status: { type: string, enum: [success, failed], example: success }
+      responses:
+        '200':
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: "Pembayaran sandbox sukses diproses" }
+                  data:
+                    type: object
+                    properties:
+                      payment_id: { type: string, example: "9f9a4a7b-3b3d-4c3e-8c3d-3b3d4c3e8c3d" }
+                      order_id: { type: string, example: "8e8a4a7b-2b2d-3c3e-7c3d-2b2d3c3e7c3d" }
+                      payment_status: { type: string, example: "paid" }
+                      paid_at: { type: string, format: date-time, example: "2026-05-30T10:15:45Z" }
+
+  /knowledge/articles:
+    get:
+      tags: [Knowledge Base]
+      summary: List Articles
+      description: Retrieve guides and helpful articles.
+      security: []
+      responses:
+        '200':
+          description: Articles retrieved
+
+  /knowledge/articles/{id}:
+    get:
+      tags: [Knowledge Base]
+      summary: Article Detail
+      description: Get single article content.
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Article retrieved
+
+  /knowledge/faq:
+    get:
+      tags: [Knowledge Base]
+      summary: List FAQ
+      description: Retrieve standard FAQs.
+      security: []
+      responses:
+        '200':
+          description: FAQs retrieved
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List Notifications
+      description: Retrieve own notifications list.
+      responses:
+        '200':
+          description: Notifications retrieved
+
+  /notifications/{id}/read:
+    patch:
+      tags: [Notifications]
+      summary: Mark Notification Read
+      description: Mark a specific notification log read.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Notification read updated
+
+  /notifications/read-all:
+    patch:
+      tags: [Notifications]
+      summary: Mark All Read
+      description: Mark all notifications read.
+      responses:
+        '200':
+          description: Action complete
+
+  # ==========================================
+  # PART D: Worker Endpoints
+  # ==========================================
+  /worker/profile:
+    get:
+      tags: [Worker Profile]
+      summary: Get Worker Profile
+      description: Retrieve detailed worker profile fields.
+      responses:
+        '200':
+          description: Profile retrieved
+    put:
+      tags: [Worker Profile]
+      summary: Update Worker Profile
+      description: Update specialties, cover photos, or bio data.
+      responses:
+        '200':
+          description: Profile updated
+
+  /worker/profile/cover-photo:
+    put:
+      tags: [Worker Profile]
+      summary: Cover Photo Upload
+      description: Upload banner picture background for profile page.
+      responses:
+        '200':
+          description: Photo updated
+
+  /worker/profile/verification:
+    post:
+      tags: [Worker Profile]
+      summary: Submit Verification Docs
+      description: Onboarding KTP, SKCK, and certs.
+      responses:
+        '201':
+          description: Document logs submitted
+    get:
+      tags: [Worker Profile]
+      summary: Get Onboarding Status
+      description: Check verification screening status.
+      responses:
+        '200':
+          description: Onboarding status retrieved
+
+  /worker/home:
+    get:
+      tags: [Worker Dashboard]
+      summary: Worker Home Dashboard
+      description: Get active orders, income analytics, acceptance rates.
+      responses:
+        '200':
+          description: Analytics retrieved
+
+  /worker/availability:
+    patch:
+      tags: [Worker Dashboard]
+      summary: Toggle Availability
+      description: Turn on/off online search matching banner.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [is_available]
+              properties:
+                is_available: { type: boolean }
+      responses:
+        '200':
+          description: Status complete
+
+  /worker/orders/incoming:
+    get:
+      tags: [Worker Orders]
+      summary: List Incoming Offers
+      description: Matched job booking listings nearby.
+      responses:
+        '200':
+          description: List retrieved
+
+  /worker/orders/incoming/{id}:
+    get:
+      tags: [Worker Orders]
+      summary: Incoming Offer Detail
+      description: Retrieve offer coordinates and details.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Offer detail retrieved
+
+  /worker/orders/{id}/accept:
+    post:
+      tags: [Worker Orders]
+      summary: Accept Offer
+      description: Lock worker en-route to start arrival travel.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Offer accepted
+
+  /worker/orders/{id}/reject:
+    post:
+      tags: [Worker Orders]
+      summary: Reject Offer
+      description: Reject matching request order.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reject_reason]
+              properties:
+                reject_reason: { type: string, enum: [busy, too_far, not_my_expertise, personal, other] }
+      responses:
+        '200':
+          description: Offer rejected
+
+  /worker/orders:
+    get:
+      tags: [Worker Orders]
+      summary: List Worker Orders
+      description: List all history/active worker orders.
+      responses:
+        '200':
+          description: List retrieved
+
+  /worker/orders/{id}:
+    get:
+      tags: [Worker Orders]
+      summary: Order Detail (Worker View)
+      description: Billing breakdown of order for worker.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Details retrieved
+
+  /worker/orders/{id}/status:
+    patch:
+      tags: [Worker Orders]
+      summary: Update Job Status
+      description: Progress job order status (on_the_way -> arrived -> in_progress -> work_paused -> completed).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [on_the_way, arrived, in_progress, work_paused, completed] }
+      responses:
+        '200':
+          description: Status updated
+
+  /worker/orders/{id}/generate-invoice:
+    post:
+      tags: [Worker Orders]
+      summary: Generate Invoice
+      description: Lock material additions, freeze pricing, finalize receipt.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '201':
+          description: Invoice generated successfully
+
+  /worker/orders/{id}/purchases:
+    post:
+      tags: [Worker Purchases]
+      summary: Add Purchase
+      description: Manually append material expense.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseInput'
+      responses:
+        '201':
+          description: Item drafted
+
+  /worker/orders/{id}/purchases/ai-process:
+    post:
+      tags: [Worker Purchases]
+      summary: AI process raw input
+      description: Parse unstructured worker notes text to fields.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [raw_input]
+              properties:
+                raw_input: { type: string, example: "beli pipa 2 meter sama lem pvc trus ongkos ojek" }
+      responses:
+        '200':
+          description: AI parsed output items
+
+  /worker/orders/{id}/purchases/receipt-scan:
+    post:
+      tags: [Worker Purchases]
+      summary: Scan receipt (OCR + AI)
+      description: Upload receipt picture and run OCR parse.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [receipt]
+              properties:
+                receipt: { type: string, format: binary }
+      responses:
+        '200':
+          description: OCR parsing complete
+
+  /worker/orders/{id}/purchases/{purchase_id}:
+    put:
+      tags: [Worker Purchases]
+      summary: Edit Purchase
+      description: Modify fields of a draft purchase item.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: purchase_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseInput'
+      responses:
+        '200':
+          description: Purchase updated
+    delete:
+      tags: [Worker Purchases]
+      summary: Delete Purchase
+      description: Remove draft purchase item.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: purchase_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Purchase deleted successfully
+
+  /worker/orders/{id}/purchases/{purchase_id}/submit:
+    post:
+      tags: [Worker Purchases]
+      summary: Submit for approval
+      description: Submit draft purchase to user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: purchase_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Submitted for approval
+
+  /worker/orders/{id}/purchases/bulk-submit:
+    post:
+      tags: [Worker Purchases]
+      summary: Bulk submit purchases
+      description: Submit multiple draft items together.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [purchase_ids]
+              properties:
+                purchase_ids: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: Status updated
+
+  /worker/orders/{id}/purchases/{purchase_id}/clarify-response:
+    patch:
+      tags: [Worker Purchases]
+      summary: Respond to clarification
+      description: Submit response text and updated details.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: purchase_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [response]
+              properties:
+                response: { type: string }
+                updated_item_name: { type: string }
+                updated_reason: { type: string }
+      responses:
+        '200':
+          description: Response submitted successfully
+
+  /worker/orders/{id}/chat/messages:
+    get:
+      tags: [Worker Chat]
+      summary: Chat History (Worker)
+      description: Retrieve room messages.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Messages retrieved
+    post:
+      tags: [Worker Chat]
+      summary: Send Message (Worker)
+      description: Send chat message.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message_type, content]
+              properties:
+                message_type: { type: string, enum: [text, image] }
+                content: { type: string }
+      responses:
+        '201':
+          description: Message sent
+
+  /worker/orders/{id}/chat/read:
+    patch:
+      tags: [Worker Chat]
+      summary: Mark chat read
+      description: Mark incoming unread room messages read.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Messages read status complete
+
+  /worker/chats:
+    get:
+      tags: [Worker Chat]
+      summary: List Conversations (Worker)
+      description: List active worker conversations.
+      responses:
+        '200':
+          description: Active chats list retrieved
+
+  /worker/orders/{id}/customer-rating:
+    post:
+      tags: [Worker Rating]
+      summary: Rate Customer
+      description: Rate customer behavior/conduct.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating, review_text]
+              properties:
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                review_text: { type: string }
+      responses:
+        '201':
+          description: Customer rated successfully
+    get:
+      tags: [Worker Rating]
+      summary: Get Customer Rating
+      description: Get review details worker gave to customer.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Rating retrieved
+
+  /worker/history:
+    get:
+      tags: [Worker History & Stats]
+      summary: Order History
+      description: Retrieve order history logs.
+      responses:
+        '200':
+          description: Completed jobs logs list retrieved
+
+  /worker/statistics:
+    get:
+      tags: [Worker History & Stats]
+      summary: Performance Statistics
+      description: Retrieve ratings, acceptance rates, and analytics logs.
+      parameters:
+        - name: period
+          in: query
+          schema: { type: string, enum: [daily, weekly, monthly, yearly, all_time], default: monthly }
+      responses:
+        '200':
+          description: Metrics logs retrieved
+
+  /worker/wallet:
+    get:
+      tags: [Worker Wallet]
+      summary: Wallet balance
+      description: Check balance, pending earnings, and metrics.
+      responses:
+        '200':
+          description: Wallet metrics retrieved
+
+  /worker/wallet/transactions:
+    get:
+      tags: [Worker Wallet]
+      summary: Transaction history
+      description: List transaction logs of digital wallet.
+      parameters:
+        - name: type
+          in: query
+          schema: { type: string, enum: [earning, withdrawal, refund, bonus, fee] }
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, completed, failed, cancelled] }
+        - name: page
+          in: query
+          schema: { type: integer }
+        - name: per_page
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Wallet transactions logs list retrieved
+
+  /worker/wallet/withdraw:
+    post:
+      tags: [Worker Wallet]
+      summary: Request withdrawal
+      description: Request digital cash cashout.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, bank_name, account_number, account_holder_name]
+              properties:
+                amount: { type: integer, example: 5000000 }
+                bank_name: { type: string, example: BCA }
+                account_number: { type: string, example: "1234567890" }
+                account_holder_name: { type: string, example: "Ahmad Jaelani" }
+                notes: { type: string }
+      responses:
+        '201':
+          description: Cashout log created
+
+  /worker/location:
+    put:
+      tags: [Worker Location Updates]
+      summary: Update location
+      description: Update coordinates during transit.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [latitude, longitude]
+              properties:
+                latitude: { type: number, example: -6.188000 }
+                longitude: { type: number, example: 106.832000 }
+                heading: { type: number }
+                speed_kmh: { type: number }
+                accuracy_meters: { type: number }
+                order_id: { type: string }
+      responses:
+        '200':
+          description: Coordinate log saved
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer token containing user/worker claims.
+
+  schemas:
+    AuthResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        message: { type: string, example: Registrasi berhasil }
+        data:
+          type: object
+          properties:
+            user_id: { type: string }
+            full_name: { type: string }
+            email: { type: string }
+            phone: { type: string }
+            role: { type: string }
+            access_token: { type: string }
+            refresh_token: { type: string }
+            token_type: { type: string, example: Bearer }
+            expires_in: { type: integer, example: 3600 }
+
+    ErrorResponse:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        message: { type: string, example: Email sudah terdaftar }
+        error_code: { type: string, example: EMAIL_ALREADY_EXISTS }
+
+    UserProfile:
+      type: object
+      properties:
+        user_id: { type: string }
+        full_name: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        role: { type: string }
+        avatar_url: { type: string }
+        address: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        is_active: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    Category:
+      type: object
+      properties:
+        category_id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        icon_url: { type: string }
+        description: { type: string }
+
+    Service:
+      type: object
+      properties:
+        service_id: { type: string }
+        category_id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string }
+        base_price: { type: number }
+        price_unit: { type: string }
+
+    WorkerNearby:
+      type: object
+      properties:
+        worker_id: { type: string }
+        full_name: { type: string }
+        avatar_url: { type: string }
+        specialization: { type: string }
+        rating: { type: number }
+        distance_km: { type: number }
+        completed_jobs: { type: integer }
+        is_verified: { type: boolean }
+        is_available: { type: boolean }
+
+    PurchaseInput:
+      type: object
+      required: [item_name, category, quantity, unit, unit_price, total_price]
+      properties:
+        item_name: { type: string, example: Pipa PVC 1/2 Inch }
+        category: { type: string, enum: [material, alat, sparepart, bahan_bangunan, biaya_tambahan, lainnya], example: material }
+        quantity: { type: number, example: 2 }
+        unit: { type: string, example: meter }
+        unit_price: { type: integer, example: 25000 }
+        total_price: { type: integer, example: 50000 }
+        reason: { type: string, example: Untuk mengganti pipa pecah }

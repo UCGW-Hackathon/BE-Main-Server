@@ -1,0 +1,1 @@
+swag init -g swagger/swagger_info.go -o swagger/docs --parseDependency --parseDepth 1 --overridesFile .swaggo 2>&1 | Select-String -Pattern "TypeSpecDef is nil" -NotMatch
