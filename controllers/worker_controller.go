@@ -3,9 +3,9 @@ package controllers
 import (
 	"net/http"
 
-	"whatsapp-backend/dto"
-	"whatsapp-backend/services"
-	"whatsapp-backend/utils"
+	"situkang/dto"
+	"situkang/services"
+	"situkang/utils"
 
 	"github.com/gin-gonic/gin"
 )

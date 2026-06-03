@@ -3,7 +3,7 @@ package utils
 import (
 	"time"
 
-	http_error "whatsapp-backend/models/error"
+	http_error "situkang/models/error"
 
 	"github.com/google/uuid"
 )

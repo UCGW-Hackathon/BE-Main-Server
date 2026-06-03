@@ -2,8 +2,8 @@ package services
 
 import (
 	"context"
-	"whatsapp-backend/dto"
-	"whatsapp-backend/repositories"
+	"situkang/dto"
+	"situkang/repositories"
 )
 
 type ConnectionService interface {

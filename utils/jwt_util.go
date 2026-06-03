@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"whatsapp-backend/models/entity"
+	"situkang/models/entity"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"

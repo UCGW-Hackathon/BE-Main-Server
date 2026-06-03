@@ -1,6 +1,6 @@
 package provider
 
-import "whatsapp-backend/controllers"
+import "situkang/controllers"
 
 type ControllerProvider interface {
 	ProvideConnectionController() controllers.ConnectionController

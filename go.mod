@@ -1,4 +1,4 @@
-module whatsapp-backend
+module situkang
 
 go 1.24.5
 

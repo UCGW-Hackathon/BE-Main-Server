@@ -25,7 +25,7 @@ param()
 # Configuration
 $ConfigDir = "./config"
 $OutputFile = "provider/config_provider.go"
-$ModulePath = "whatsapp-backend/config"
+$ModulePath = "situkang/config"
 
 # ANSI colors for better output
 $script:UseColors = $Host.UI.SupportsVirtualTerminal

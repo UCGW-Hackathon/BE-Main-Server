@@ -1,6 +1,6 @@
 # Deploying Go Backend to Hugging Face Spaces
 
-This guide outlines the steps to deploy your Go application (`whatsapp-backend`) to Hugging Face Spaces using Docker.
+This guide outlines the steps to deploy your Go application (`situkang`) to Hugging Face Spaces using Docker.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ This guide outlines the steps to deploy your Go application (`whatsapp-backend`)
 1.  Log in to your Hugging Face account.
 2.  Click on your profile picture in the top right and select **New Space**.
 3.  **Owner**: Select your username or organization.
-4.  **Space Name**: Enter a name for your space (e.g., `whatsapp-backend`).
+4.  **Space Name**: Enter a name for your space (e.g., `situkang`).
 5.  **License**: Choose a license (e.g., MIT) or leave it empty correctly.
 6.  **SDK**: Select **Docker**.
 7.  **Blank**: Choose "Blank" to start with an empty repository.
@@ -84,7 +84,7 @@ This method automatically pushes your code to the Hugging Face Space whenever yo
     - Open `.github/workflows/sync-to-hub.yml` in your project.
     - Find the `git push` command at the bottom.
     - Replace `YOUR_USERNAME` and `SPACE_NAME` with your actual Hugging Face username and Space name.
-    - _Example_: `git push https://ryu:Start@huggingface.co/spaces/ryu/whatsapp-backend test:main -f`
+    - _Example_: `git push https://ryu:Start@huggingface.co/spaces/ryu/situkang test:main -f`
 
 4.  **Trigger Deployment**:
     - Simply push any change to your `test` branch:

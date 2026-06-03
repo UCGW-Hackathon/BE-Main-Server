@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	http_error "whatsapp-backend/models/error"
-	"whatsapp-backend/utils"
+	http_error "situkang/models/error"
+	"situkang/utils"
 
 	"github.com/gin-gonic/gin"
 )

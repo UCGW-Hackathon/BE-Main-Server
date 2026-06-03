@@ -23,7 +23,7 @@ param()
 # Configuration
 $MiddlewareDir = "./middleware"
 $OutputFile = "provider/middleware_provider.go"
-$ModulePath = "whatsapp-backend/middleware"
+$ModulePath = "situkang/middleware"
 
 # ANSI colors for better output
 $script:UseColors = $Host.UI.SupportsVirtualTerminal

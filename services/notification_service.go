@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"whatsapp-backend/models/entity"
+	"situkang/models/entity"
 
 	"gorm.io/gorm"
 )

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"whatsapp-backend/dto"
-	"whatsapp-backend/models/entity"
+	"situkang/dto"
+	"situkang/models/entity"
 
 	"gorm.io/gorm"
 )

@@ -1,6 +1,6 @@
 package provider
 
-import "whatsapp-backend/services"
+import "situkang/services"
 
 type ServicesProvider interface {
 	ProvideConnectionService() services.ConnectionService

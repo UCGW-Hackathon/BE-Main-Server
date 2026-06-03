@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"whatsapp-backend/services"
-	"whatsapp-backend/utils"
+	"situkang/services"
+	"situkang/utils"
 
 	"github.com/gin-gonic/gin"
 )

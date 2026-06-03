@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"time"
 
-	"whatsapp-backend/dto"
-	"whatsapp-backend/models/entity"
-	http_error "whatsapp-backend/models/error"
+	"situkang/dto"
+	"situkang/models/entity"
+	http_error "situkang/models/error"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"

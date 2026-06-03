@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"whatsapp-backend/middleware"
+	"situkang/middleware"
 
 	"github.com/gin-gonic/gin"
 )

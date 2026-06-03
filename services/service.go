@@ -3,8 +3,8 @@ package services
 import (
 	"context"
 
-	"whatsapp-backend/middleware"
-	http_error "whatsapp-backend/models/error"
+	"situkang/middleware"
+	http_error "situkang/models/error"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

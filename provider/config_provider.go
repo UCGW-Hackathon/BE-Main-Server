@@ -3,8 +3,8 @@ package provider
 import (
 	"log"
 
-	"whatsapp-backend/config"
-	"whatsapp-backend/models/entity"
+	"situkang/config"
+	"situkang/models/entity"
 )
 
 type ConfigProvider interface {

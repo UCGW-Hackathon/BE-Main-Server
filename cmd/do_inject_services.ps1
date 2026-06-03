@@ -23,7 +23,7 @@ param()
 # Configuration
 $ServicesDir = "./services"
 $OutputFile = "provider/services_provider.go"
-$ModulePath = "whatsapp-backend/services"
+$ModulePath = "situkang/services"
 
 # ANSI colors for better output (fallback to plain text if not supported)
 $script:UseColors = $Host.UI.SupportsVirtualTerminal

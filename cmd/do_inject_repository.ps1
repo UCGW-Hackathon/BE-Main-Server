@@ -24,7 +24,7 @@ param()
 # Configuration
 $RepositoriesDir = "./repositories"
 $OutputFile = "provider/repositories_provider.go"
-$ModulePath = "whatsapp-backend/repositories"
+$ModulePath = "situkang/repositories"
 
 # ANSI colors for better output
 $script:UseColors = $Host.UI.SupportsVirtualTerminal

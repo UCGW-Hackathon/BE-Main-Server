@@ -1,8 +1,8 @@
 package main
 
 import (
-	"whatsapp-backend/provider"
-	"whatsapp-backend/router"
+	"situkang/provider"
+	"situkang/router"
 )
 
 func main() {

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	dto "whatsapp-backend/models/dto"
-	http_error "whatsapp-backend/models/error"
+	dto "situkang/models/dto"
+	http_error "situkang/models/error"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

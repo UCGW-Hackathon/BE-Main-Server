@@ -23,7 +23,7 @@ param()
 # Configuration
 $ControllersDir = "./controllers"
 $OutputFile = "provider/controller_provider.go"
-$ModulePath = "whatsapp-backend/controllers"
+$ModulePath = "situkang/controllers"
 
 # ANSI colors for better output
 $script:UseColors = $Host.UI.SupportsVirtualTerminal

@@ -4,8 +4,8 @@ import (
 	"os"
 	"strings"
 
-	"whatsapp-backend/models/entity"
-	"whatsapp-backend/utils"
+	"situkang/models/entity"
+	"situkang/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

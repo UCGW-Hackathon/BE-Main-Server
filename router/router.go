@@ -3,8 +3,8 @@ package router
 import (
 	"log"
 
-	"whatsapp-backend/middleware"
-	"whatsapp-backend/provider"
+	"situkang/middleware"
+	"situkang/provider"
 )
 
 func RunRouter(appProvider provider.AppProvider) {

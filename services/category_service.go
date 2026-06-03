@@ -3,7 +3,7 @@ package services
 import (
 	"context"
 
-	"whatsapp-backend/models/entity"
+	"situkang/models/entity"
 
 	"gorm.io/gorm"
 )

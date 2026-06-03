@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"whatsapp-backend/models/entity"
+	"situkang/models/entity"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"

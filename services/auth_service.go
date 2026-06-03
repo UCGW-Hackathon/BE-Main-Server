@@ -12,11 +12,11 @@ import (
 	"time"
 	"unicode"
 
-	"whatsapp-backend/config"
-	"whatsapp-backend/dto"
-	"whatsapp-backend/models/entity"
-	http_error "whatsapp-backend/models/error"
-	"whatsapp-backend/utils"
+	"situkang/config"
+	"situkang/dto"
+	"situkang/models/entity"
+	http_error "situkang/models/error"
+	"situkang/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

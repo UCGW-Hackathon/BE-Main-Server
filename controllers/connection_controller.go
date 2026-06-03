@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"whatsapp-backend/dto"
-	"whatsapp-backend/services"
-	"whatsapp-backend/utils"
+	"situkang/dto"
+	"situkang/services"
+	"situkang/utils"
 
 	"github.com/gin-gonic/gin"
 )

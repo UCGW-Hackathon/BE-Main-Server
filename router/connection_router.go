@@ -1,9 +1,9 @@
 package router
 
 import (
-	"whatsapp-backend/middleware"
-	"whatsapp-backend/models/entity"
-	"whatsapp-backend/provider"
+	"situkang/middleware"
+	"situkang/models/entity"
+	"situkang/provider"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
