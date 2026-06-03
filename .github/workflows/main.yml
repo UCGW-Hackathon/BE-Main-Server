@@ -38,6 +38,13 @@ jobs:
       - name: Copy Files to Space
         run: |
           rsync -av --exclude='.git' ./ space/
+      # Ensure /swagger path exists for static hosting
+      - name: Ensure Swagger static path
+        run: |
+          cd space
+          mkdir -p swagger
+          if [ -f docs/index.html ]; then cp docs/index.html swagger/index.html; fi
+          if [ -f docs/openapi.yaml ]; then cp docs/openapi.yaml swagger/openapi.yaml; fi
       # Commit and Push to Huggingface Space
       - name: Commit and Push to Huggingface
         env:
