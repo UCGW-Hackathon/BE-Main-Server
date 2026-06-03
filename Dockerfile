@@ -15,6 +15,7 @@ RUN addgroup -S app && adduser -S -G app app && apk add --no-cache ca-certificat
 WORKDIR /app
 
 COPY --from=builder /out/situkang-api ./situkang-api
+COPY --from=builder /src/docs ./docs
 
 RUN mkdir -p /app/logs /app/uploads && chown -R app:app /app
 
