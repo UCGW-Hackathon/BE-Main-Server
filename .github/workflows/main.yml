@@ -20,7 +20,7 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git clone https://huggingface.co/spaces/XRyZ/${{secrets.HF_REPO_NAME}} space
+          git clone https://__token__:${HF_TOKEN}@huggingface.co/spaces/XRyZ/${{secrets.HF_REPO_NAME}} space
       # Update Git Remote URL and Pull Latest Changes
       - name: Update Remote and Pull Changes
         env:
