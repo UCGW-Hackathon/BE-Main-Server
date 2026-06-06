@@ -206,7 +206,7 @@ func (s *workerPublicService) getWorkerRow(ctx context.Context, id uuid.UUID) (w
 			wp.completed_jobs, wp.is_available`).
 		Joins("JOIN worker_profiles wp ON wp.user_id = u.id").
 		Where("u.id = ? AND u.role = ? AND u.is_active = TRUE", id, entity.UserRoleWorker).
-		First(&row).Error
+		Take(&row).Error
 	return row, err
 }
 

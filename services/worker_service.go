@@ -121,6 +121,61 @@ func (s *workerService) UpdateProfile(ctx context.Context, req dto.WorkerProfile
 				return err
 			}
 		}
+
+		if req.Services != nil {
+			// Set all current worker services to inactive
+			if err := tx.Model(&entity.WorkerService{}).Where("worker_id = ?", workerID).Update("is_active", false).Error; err != nil {
+				return err
+			}
+
+			for _, item := range req.Services {
+				m, ok := item.(map[string]any)
+				if !ok {
+					continue
+				}
+				slug, _ := m["service_slug"].(string)
+				if slug == "" {
+					continue
+				}
+				var svc entity.Service
+				if err := tx.Where("slug = ? AND is_active = TRUE", slug).First(&svc).Error; err != nil {
+					continue
+				}
+
+				var customPrice *int
+				if cpVal, exists := m["custom_price"]; exists {
+					if cpFloat, ok := cpVal.(float64); ok {
+						intVal := int(cpFloat)
+						customPrice = &intVal
+					} else if cpInt, ok := cpVal.(int); ok {
+						customPrice = &cpInt
+					}
+				}
+
+				var ws entity.WorkerService
+				err := tx.Where("worker_id = ? AND service_id = ?", workerID, svc.ID).First(&ws).Error
+				if err != nil {
+					newWS := entity.WorkerService{
+						WorkerID:    workerID,
+						ServiceID:   svc.ID,
+						CustomPrice: customPrice,
+						IsActive:    true,
+					}
+					if err := tx.Create(&newWS).Error; err != nil {
+						return err
+					}
+				} else {
+					updates := map[string]any{
+						"is_active":    true,
+						"custom_price": customPrice,
+					}
+					if err := tx.Model(&entity.WorkerService{}).Where("id = ?", ws.ID).Updates(updates).Error; err != nil {
+						return err
+					}
+				}
+			}
+		}
+
 		return nil
 	}); err != nil {
 		return nil, err
