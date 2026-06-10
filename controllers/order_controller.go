@@ -35,6 +35,8 @@ type OrderController interface {
 	DownloadInvoicePDF(ctx *gin.Context)
 	SandboxCheckout(ctx *gin.Context)
 	SandboxCallback(ctx *gin.Context)
+	HandleMidtransWebhook(ctx *gin.Context)
+	SyncMidtransPayment(ctx *gin.Context)
 }
 
 type orderController struct {
@@ -602,4 +604,31 @@ func formatRupiah(amount int) string {
 		}
 	}
 	return string(result)
+}
+
+func (oc *orderController) HandleMidtransWebhook(ctx *gin.Context) {
+	var req dto.MidtransWebhookRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		utils.ResponseFAILED(ctx, nil, err)
+		return
+	}
+
+	data, err := oc.orderService.HandleMidtransWebhook(ctx, req)
+	if err != nil {
+		utils.ResponseFAILED(ctx, nil, err)
+		return
+	}
+
+	utils.JSONSuccess(ctx, http.StatusOK, "Webhook Midtrans sukses diproses", data, nil)
+}
+
+func (oc *orderController) SyncMidtransPayment(ctx *gin.Context) {
+	orderID := ctx.Param("order_id")
+	data, err := oc.orderService.SyncMidtransPayment(ctx, orderID)
+	if err != nil {
+		utils.ResponseFAILED(ctx, nil, err)
+		return
+	}
+
+	utils.JSONSuccess(ctx, http.StatusOK, "Status pembayaran berhasil disinkronisasi", data, nil)
 }

@@ -146,6 +146,8 @@ type Payment struct {
 	PaymentStatus   PaymentStatus `gorm:"type:payment_status;not null;default:'unpaid';index"`
 	PaymentProofURL *string       `gorm:"type:text"`
 	TransactionRef  *string       `gorm:"type:varchar(255)"`
+	SnapToken       *string       `gorm:"type:varchar(255)"`
+	SnapRedirectURL *string       `gorm:"type:text"`
 	PaidAt          *time.Time    `gorm:"type:timestamptz"`
 	RefundedAt      *time.Time    `gorm:"type:timestamptz"`
 	RefundAmount    *int          `gorm:"type:integer"`

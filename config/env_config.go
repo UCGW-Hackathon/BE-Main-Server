@@ -11,6 +11,7 @@ import (
 
 type EnvConfig interface {
 	GetAppEnv() string
+	GetAppURL() string
 	GetTCPAddress() string
 	GetLogPath() string
 	GetHostAddress() string
@@ -32,6 +33,9 @@ type EnvConfig interface {
 	GetSupabaseURL() string
 	GetSupabaseKey() string
 	GetSupabaseBucket() string
+	GetMidtransServerKey() string
+	GetMidtransClientKey() string
+	IsMidtransProduction() bool
 }
 
 type envConfig struct {
@@ -72,6 +76,15 @@ func getEnvBool(key string, fallback bool) bool {
 
 func (e *envConfig) GetAppEnv() string {
 	return strings.ToLower(getEnv("APP_ENV", "development"))
+}
+
+func (e *envConfig) GetAppURL() string {
+	appURL := getEnv("APP_URL", "")
+	if appURL != "" {
+		return strings.TrimRight(appURL, "/")
+	}
+	port := e.GetHostPort()
+	return "http://localhost:" + port
 }
 
 func (e *envConfig) GetTCPAddress() string {
@@ -165,4 +178,16 @@ func (e *envConfig) GetSupabaseKey() string {
 
 func (e *envConfig) GetSupabaseBucket() string {
 	return strings.TrimSpace(os.Getenv("SUPABASE_BUCKET_NAME"))
+}
+
+func (e *envConfig) GetMidtransServerKey() string {
+	return getEnv("MIDTRANS_SERVER_KEY", "")
+}
+
+func (e *envConfig) GetMidtransClientKey() string {
+	return getEnv("MIDTRANS_CLIENT_KEY", "")
+}
+
+func (e *envConfig) IsMidtransProduction() bool {
+	return getEnvBool("MIDTRANS_IS_PRODUCTION", false)
 }

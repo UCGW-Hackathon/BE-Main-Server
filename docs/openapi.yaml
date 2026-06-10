@@ -894,6 +894,77 @@ paths:
                       payment_status: { type: string, example: "paid" }
                       paid_at: { type: string, format: date-time, example: "2026-05-30T10:15:45Z" }
 
+  /payments/midtrans-webhook:
+    post:
+      tags: [Sandbox Payment Gateway]
+      summary: Midtrans Webhook Callback
+      description: Callback webhook from Midtrans Sandbox to verify signature and capture/settle payment status.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [order_id, status_code, gross_amount, signature_key, transaction_status]
+              properties:
+                transaction_time: { type: string, example: "2026-06-10 18:27:19" }
+                transaction_status: { type: string, example: "settlement" }
+                status_message: { type: string, example: "midtrans payment notification" }
+                status_code: { type: string, example: "200" }
+                signature_key: { type: string, example: "sha512_hash_here" }
+                payment_type: { type: string, example: "credit_card" }
+                order_id: { type: string, example: "9f9a4a7b-3b3d-4c3e-8c3d-3b3d4c3e8c3d" }
+                merchant_id: { type: string, example: "G135002001" }
+                gross_amount: { type: string, example: "150000.00" }
+                fraud_status: { type: string, example: "accept" }
+                currency: { type: string, example: "IDR" }
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: "Webhook Midtrans sukses diproses" }
+                  data:
+                    type: object
+                    properties:
+                      payment_id: { type: string, example: "9f9a4a7b-3b3d-4c3e-8c3d-3b3d4c3e8c3d" }
+                      order_id: { type: string, example: "8e8a4a7b-2b2d-3c3e-7c3d-2b2d3c3e7c3d" }
+                      payment_status: { type: string, example: "paid" }
+                      paid_at: { type: string, format: date-time, example: "2026-06-10T18:27:19Z" }
+
+  /orders/{order_id}/payment/sync:
+    post:
+      tags: [Customer Payments]
+      summary: Sync Midtrans Payment Status
+      description: Pull the latest payment status from Midtrans Sandbox for a given order and update the local database.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Status synchronized successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  message: { type: string, example: "Status pembayaran berhasil disinkronisasi" }
+                  data:
+                    type: object
+                    properties:
+                      payment_id: { type: string, example: "9f9a4a7b-3b3d-4c3e-8c3d-3b3d4c3e8c3d" }
+                      order_id: { type: string, example: "8e8a4a7b-2b2d-3c3e-7c3d-2b2d3c3e7c3d" }
+                      payment_status: { type: string, example: "paid" }
+                      paid_at: { type: string, format: date-time, example: "2026-06-10T18:27:19Z" }
+
   /knowledge/articles:
     get:
       tags: [Knowledge Base]

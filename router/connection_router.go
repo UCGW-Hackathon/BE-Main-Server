@@ -38,6 +38,7 @@ func ConnectionRouter(router *gin.Engine, controller provider.ControllerProvider
 	{
 		payments.GET("/sandbox-checkout", orderController.SandboxCheckout)
 		payments.POST("/sandbox-callback", orderController.SandboxCallback)
+		payments.POST("/midtrans-webhook", orderController.HandleMidtransWebhook)
 	}
 
 	auth := api.Group("/auth")
@@ -100,6 +101,7 @@ func ConnectionRouter(router *gin.Engine, controller provider.ControllerProvider
 		userOnly.GET("/orders/:order_id/rating", orderController.GetRating)
 		userOnly.GET("/orders/:order_id/invoice", orderController.GetInvoice)
 		userOnly.POST("/orders/:order_id/payment", orderController.CreatePayment)
+		userOnly.POST("/orders/:order_id/payment/sync", orderController.SyncMidtransPayment)
 		userOnly.GET("/orders/:order_id/invoice/pdf", orderController.DownloadInvoicePDF)
 	}
 

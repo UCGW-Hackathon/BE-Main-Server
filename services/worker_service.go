@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"situkang/config"
 	"situkang/dto"
 	"situkang/models/entity"
 	http_error "situkang/models/error"
@@ -54,11 +55,12 @@ type WorkerService interface {
 }
 
 type workerService struct {
-	db *gorm.DB
+	db  *gorm.DB
+	env config.EnvConfig
 }
 
-func NewWorkerService(db *gorm.DB) WorkerService {
-	return &workerService{db: db}
+func NewWorkerService(db *gorm.DB, env config.EnvConfig) WorkerService {
+	return &workerService{db: db, env: env}
 }
 
 func (s *workerService) GetProfile(ctx context.Context) (any, error) {
@@ -289,7 +291,7 @@ func (s *workerService) ListIncomingOrders(ctx context.Context) (any, error) {
 	if err := s.db.WithContext(ctx).Where("worker_id = ? AND status = ?", workerID, entity.OrderStatusPending).Order("created_at DESC").Find(&orders).Error; err != nil {
 		return nil, err
 	}
-	return NewOrderService(s.db).(*orderService).orderList(ctx, orders), nil
+	return NewOrderService(s.db, s.env).(*orderService).orderList(ctx, orders), nil
 }
 
 func (s *workerService) GetIncomingOrderDetail(ctx context.Context, orderID string) (any, error) {
@@ -354,7 +356,7 @@ func (s *workerService) ListOrders(ctx context.Context) (any, error) {
 	if err := s.db.WithContext(ctx).Where("worker_id = ?", workerID).Order("created_at DESC").Find(&orders).Error; err != nil {
 		return nil, err
 	}
-	return NewOrderService(s.db).(*orderService).orderList(ctx, orders), nil
+	return NewOrderService(s.db, s.env).(*orderService).orderList(ctx, orders), nil
 }
 
 func (s *workerService) GetOrderDetail(ctx context.Context, orderID string) (any, error) {
@@ -366,7 +368,7 @@ func (s *workerService) GetOrderDetail(ctx context.Context, orderID string) (any
 	if err != nil {
 		return nil, err
 	}
-	return NewOrderService(s.db).(*orderService).orderDetail(ctx, order)
+	return NewOrderService(s.db, s.env).(*orderService).orderDetail(ctx, order)
 }
 
 func (s *workerService) UpdateOrderStatus(ctx context.Context, orderID string, req dto.WorkerOrderStatusRequest) (any, error) {
@@ -496,7 +498,7 @@ func (s *workerService) UpdatePurchase(ctx context.Context, orderID string, purc
 	if err != nil {
 		return nil, err
 	}
-	purchase, err := NewOrderService(s.db).(*orderService).getPurchase(ctx, order.ID, purchaseID)
+	purchase, err := NewOrderService(s.db, s.env).(*orderService).getPurchase(ctx, order.ID, purchaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -526,7 +528,7 @@ func (s *workerService) DeletePurchase(ctx context.Context, orderID string, purc
 	if err != nil {
 		return err
 	}
-	purchase, err := NewOrderService(s.db).(*orderService).getPurchase(ctx, order.ID, purchaseID)
+	purchase, err := NewOrderService(s.db, s.env).(*orderService).getPurchase(ctx, order.ID, purchaseID)
 	if err != nil {
 		return err
 	}
@@ -579,7 +581,7 @@ func (s *workerService) ClarifyPurchaseResponse(ctx context.Context, orderID str
 	if err != nil {
 		return nil, err
 	}
-	purchase, err := NewOrderService(s.db).(*orderService).getPurchase(ctx, order.ID, purchaseID)
+	purchase, err := NewOrderService(s.db, s.env).(*orderService).getPurchase(ctx, order.ID, purchaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -655,7 +657,7 @@ func (s *workerService) CreateCustomerRating(ctx context.Context, orderID string
 		return nil, err
 	}
 	review := entity.Review{OrderID: order.ID, UserID: order.UserID, WorkerID: workerID, ReviewType: "customer", Rating: int16(req.Rating), Comment: req.Comment}
-	if err := NewOrderService(s.db).(*orderService).createReviewWithTags(ctx, review, req.Tags); err != nil {
+	if err := NewOrderService(s.db, s.env).(*orderService).createReviewWithTags(ctx, review, req.Tags); err != nil {
 		return nil, err
 	}
 	return map[string]any{"customer_review_id": review.ID.String(), "order_id": order.ID.String()}, nil
@@ -686,7 +688,7 @@ func (s *workerService) GetHistory(ctx context.Context) (any, error) {
 	if err := s.db.WithContext(ctx).Where("worker_id = ? AND status IN ?", workerID, []entity.OrderStatus{entity.OrderStatusCompleted, entity.OrderStatusCancelled, entity.OrderStatusRejected}).Order("created_at DESC").Find(&orders).Error; err != nil {
 		return nil, err
 	}
-	return map[string]any{"orders": NewOrderService(s.db).(*orderService).orderList(ctx, orders)}, nil
+	return map[string]any{"orders": NewOrderService(s.db, s.env).(*orderService).orderList(ctx, orders)}, nil
 }
 
 func (s *workerService) GetStatistics(ctx context.Context) (any, error) {
@@ -805,7 +807,7 @@ func (s *workerService) updatePurchaseStatus(ctx context.Context, orderID string
 	if err != nil {
 		return nil, err
 	}
-	purchase, err := NewOrderService(s.db).(*orderService).getPurchase(ctx, order.ID, purchaseID)
+	purchase, err := NewOrderService(s.db, s.env).(*orderService).getPurchase(ctx, order.ID, purchaseID)
 	if err != nil {
 		return nil, err
 	}

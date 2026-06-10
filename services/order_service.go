@@ -1,12 +1,19 @@
 package services
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha512"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"time"
 
+	"situkang/config"
 	"situkang/dto"
 	"situkang/models/entity"
 	http_error "situkang/models/error"
@@ -39,14 +46,17 @@ type OrderService interface {
 	DownloadInvoicePDF(ctx context.Context, orderID string) ([]byte, error)
 	SandboxCallback(ctx context.Context, req dto.SandboxPaymentCallbackRequest) (any, error)
 	GetPaymentDetails(ctx context.Context, paymentID string) (any, error)
+	HandleMidtransWebhook(ctx context.Context, req dto.MidtransWebhookRequest) (any, error)
+	SyncMidtransPayment(ctx context.Context, paymentID string) (any, error)
 }
 
 type orderService struct {
-	db *gorm.DB
+	db  *gorm.DB
+	env config.EnvConfig
 }
 
-func NewOrderService(db *gorm.DB) OrderService {
-	return &orderService{db: db}
+func NewOrderService(db *gorm.DB, env config.EnvConfig) OrderService {
+	return &orderService{db: db, env: env}
 }
 
 func (s *orderService) CreateOrder(ctx context.Context, req dto.OrderCreateRequest) (any, error) {
@@ -576,30 +586,224 @@ func (s *orderService) CreatePayment(ctx context.Context, orderID string, req dt
 	if err := s.db.WithContext(ctx).First(&invoice, "order_id = ?", order.ID).Error; err != nil {
 		return nil, err
 	}
-	paymentRef := fmt.Sprintf("PAY-REF-%s", uuid.NewString()[:8])
-	payment := entity.Payment{
-		OrderID:         order.ID,
-		InvoiceID:       invoice.ID,
-		UserID:          userID,
-		Amount:          invoice.GrandTotal,
-		PaymentMethod:   entity.PaymentMethod(req.PaymentMethod),
-		PaymentStatus:   entity.PaymentStatusPending,
-		PaymentProofURL: req.PaymentProofURL,
-		TransactionRef:  &paymentRef,
+
+	var existingPayment entity.Payment
+	errExist := s.db.WithContext(ctx).First(&existingPayment, "order_id = ? AND payment_status = ?", order.ID, entity.PaymentStatusPending).Error
+
+	var payment entity.Payment
+	if errExist == nil {
+		payment = existingPayment
+	} else {
+		payment = entity.Payment{
+			OrderID:       order.ID,
+			InvoiceID:     invoice.ID,
+			UserID:        userID,
+			Amount:        invoice.GrandTotal,
+			PaymentMethod: entity.PaymentMethod(req.PaymentMethod),
+			PaymentStatus: entity.PaymentStatusPending,
+		}
+		if err := s.db.WithContext(ctx).Create(&payment).Error; err != nil {
+			return nil, err
+		}
 	}
-	if err := s.db.WithContext(ctx).Create(&payment).Error; err != nil {
+
+	var customer entity.User
+	if err := s.db.WithContext(ctx).First(&customer, "id = ?", userID).Error; err != nil {
 		return nil, err
 	}
-	return map[string]any{
-		"payment_id":     payment.ID.String(),
-		"order_id":       order.ID.String(),
-		"invoice_id":     invoice.ID.String(),
-		"amount":         payment.Amount,
-		"payment_status": payment.PaymentStatus,
-		"token":          paymentRef,
-		"redirect_url":   fmt.Sprintf("http://localhost:8080/v1/payments/sandbox-checkout?payment_id=%s", payment.ID.String()),
-		"created_at":     payment.CreatedAt,
+
+	var snapToken string
+	var snapRedirectURL string
+	if req.PaymentMethod == string(entity.PaymentMethodBankTransfer) || req.PaymentMethod == string(entity.PaymentMethodEWallet) {
+		token, redirectURL, err := s.requestMidtransSnapToken(ctx, payment.ID.String(), payment.Amount, order.OrderNumber, customer.FullName, customer.Email, customer.Phone)
+		if err != nil {
+			return nil, err
+		}
+		snapToken = token
+		snapRedirectURL = redirectURL
+
+		payment.SnapToken = &snapToken
+		payment.SnapRedirectURL = &snapRedirectURL
+		payment.PaymentMethod = entity.PaymentMethod(req.PaymentMethod)
+		if err := s.db.WithContext(ctx).Save(&payment).Error; err != nil {
+			return nil, err
+		}
+	} else {
+		paymentRef := fmt.Sprintf("PAY-REF-%s", uuid.NewString()[:8])
+		payment.TransactionRef = &paymentRef
+		payment.PaymentMethod = entity.PaymentMethod(req.PaymentMethod)
+		
+		appURL := s.env.GetAppURL()
+		redirectURL := fmt.Sprintf("%s/v1/payments/sandbox-checkout?payment_id=%s", appURL, payment.ID.String())
+		payment.SnapRedirectURL = &redirectURL
+		if err := s.db.WithContext(ctx).Save(&payment).Error; err != nil {
+			return nil, err
+		}
+		snapRedirectURL = redirectURL
+	}
+
+	var tokenStr *string
+	if payment.SnapToken != nil {
+		tokenStr = payment.SnapToken
+	} else {
+		tokenStr = payment.TransactionRef
+	}
+
+	return dto.PaymentResponse{
+		PaymentID:     payment.ID.String(),
+		OrderID:       payment.OrderID.String(),
+		InvoiceID:     payment.InvoiceID.String(),
+		Amount:        payment.Amount,
+		PaymentStatus: string(payment.PaymentStatus),
+		Token:         tokenStr,
+		RedirectURL:   payment.SnapRedirectURL,
+		CreatedAt:     payment.CreatedAt.Format(time.RFC3339),
 	}, nil
+}
+
+func (s *orderService) processPaymentSuccess(tx *gorm.DB, payment *entity.Payment, now time.Time, ref string, isMidtrans bool) error {
+	payment.PaymentStatus = entity.PaymentStatusPaid
+	payment.PaidAt = &now
+	payment.TransactionRef = &ref
+	if err := tx.Save(payment).Error; err != nil {
+		return err
+	}
+
+	if err := tx.Model(&entity.Order{}).Where("id = ?", payment.OrderID).Updates(map[string]any{
+		"status":       entity.OrderStatusCompleted,
+		"completed_at": &now,
+	}).Error; err != nil {
+		return err
+	}
+
+	desc := "Pembayaran berhasil diverifikasi secara instan via Payment Gateway Sandbox"
+	if isMidtrans {
+		desc = "Pembayaran berhasil diverifikasi secara instan via Midtrans Sandbox"
+	}
+	timeline := entity.OrderTimeline{
+		OrderID:     payment.OrderID,
+		Event:       "paid",
+		Label:       "Pembayaran Sukses",
+		Description: &desc,
+	}
+	metadata, _ := json.Marshal(map[string]any{
+		"payment_id":      payment.ID.String(),
+		"transaction_ref": payment.TransactionRef,
+		"amount":          payment.Amount,
+	})
+	timeline.Metadata = metadata
+	if err := tx.Create(&timeline).Error; err != nil {
+		return err
+	}
+
+	var order entity.Order
+	if err := tx.First(&order, "id = ?", payment.OrderID).Error; err == nil {
+		var wallet entity.WorkerWallet
+		errWallet := tx.First(&wallet, "worker_id = ?", order.WorkerID).Error
+		if errWallet == nil {
+			balanceBefore := wallet.Balance
+			earningAmount := int64(payment.Amount)
+			balanceAfter := balanceBefore + earningAmount
+
+			if err := tx.Model(&wallet).Updates(map[string]any{
+				"balance":        balanceAfter,
+				"total_earnings": wallet.TotalEarnings + earningAmount,
+			}).Error; err != nil {
+				return err
+			}
+
+			txDesc := fmt.Sprintf("Pendapatan jasa dari Order %s", order.OrderNumber)
+			walletTx := entity.WalletTransaction{
+				WalletID:      wallet.ID,
+				OrderID:       &order.ID,
+				Type:          entity.WalletTxTypeEarning,
+				Amount:        payment.Amount,
+				BalanceBefore: balanceBefore,
+				BalanceAfter:  balanceAfter,
+				Description:   &txDesc,
+				ReferenceID:   payment.TransactionRef,
+				Status:        entity.WalletTxStatusCompleted,
+				CompletedAt:   &now,
+			}
+			if err := tx.Create(&walletTx).Error; err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (s *orderService) getMidtransSnapURL() string {
+	if s.env.IsMidtransProduction() {
+		return "https://app.midtrans.com/snap/v1/transactions"
+	}
+	return "https://app.sandbox.midtrans.com/snap/v1/transactions"
+}
+
+func (s *orderService) getMidtransStatusURL(orderID string) string {
+	if s.env.IsMidtransProduction() {
+		return fmt.Sprintf("https://api.midtrans.com/v2/%s/status", orderID)
+	}
+	return fmt.Sprintf("https://api.sandbox.midtrans.com/v2/%s/status", orderID)
+}
+
+func (s *orderService) requestMidtransSnapToken(ctx context.Context, paymentID string, amount int, orderNo string, customerName, customerEmail, customerPhone string) (string, string, error) {
+	serverKey := s.env.GetMidtransServerKey()
+	if serverKey == "" {
+		return "", "", errors.New("MIDTRANS_SERVER_KEY is not configured")
+	}
+
+	url := s.getMidtransSnapURL()
+
+	payload := map[string]any{
+		"transaction_details": map[string]any{
+			"order_id":     paymentID,
+			"gross_amount": amount,
+		},
+		"customer_details": map[string]any{
+			"first_name": customerName,
+			"email":      customerEmail,
+			"phone":      customerPhone,
+		},
+	}
+
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return "", "", err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return "", "", err
+	}
+
+	auth := base64.StdEncoding.EncodeToString([]byte(serverKey + ":"))
+	req.Header.Set("Authorization", "Basic "+auth)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return "", "", fmt.Errorf("midtrans error: status %d, body: %s", resp.StatusCode, string(respBody))
+	}
+
+	var response struct {
+		Token       string `json:"token"`
+		RedirectURL string `json:"redirect_url"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return "", "", err
+	}
+
+	return response.Token, response.RedirectURL, nil
 }
 
 func (s *orderService) SandboxCallback(ctx context.Context, req dto.SandboxPaymentCallbackRequest) (any, error) {
@@ -629,71 +833,85 @@ func (s *orderService) SandboxCallback(ctx context.Context, req dto.SandboxPayme
 	}
 
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		payment.PaymentStatus = paymentStatus
-		payment.PaidAt = &now
-		if err := tx.Save(&payment).Error; err != nil {
-			return err
-		}
-
 		if paymentStatus == entity.PaymentStatusPaid {
-			if err := tx.Model(&entity.Order{}).Where("id = ?", payment.OrderID).Updates(map[string]any{
-				"status":       entity.OrderStatusCompleted,
-				"completed_at": &now,
-			}).Error; err != nil {
-				return err
-			}
+			paymentRef := fmt.Sprintf("PAY-REF-%s", uuid.NewString()[:8])
+			return s.processPaymentSuccess(tx, &payment, now, paymentRef, false)
+		} else {
+			payment.PaymentStatus = paymentStatus
+			payment.PaidAt = &now
+			return tx.Save(&payment).Error
+		}
+	})
 
-			desc := "Pembayaran berhasil diverifikasi secara instan via Payment Gateway Sandbox"
-			timeline := entity.OrderTimeline{
-				OrderID:     payment.OrderID,
-				Event:       "paid",
-				Label:       "Pembayaran Sukses",
-				Description: &desc,
-			}
-			metadata, _ := json.Marshal(map[string]any{
-				"payment_id":      payment.ID.String(),
-				"transaction_ref": payment.TransactionRef,
-				"amount":          payment.Amount,
-			})
-			timeline.Metadata = metadata
-			if err := tx.Create(&timeline).Error; err != nil {
-				return err
-			}
+	if err != nil {
+		return nil, err
+	}
 
-			var order entity.Order
-			if err := tx.First(&order, "id = ?", payment.OrderID).Error; err == nil {
-				var wallet entity.WorkerWallet
-				errWallet := tx.First(&wallet, "worker_id = ?", order.WorkerID).Error
-				if errWallet == nil {
-					balanceBefore := wallet.Balance
-					earningAmount := int64(payment.Amount)
-					balanceAfter := balanceBefore + earningAmount
+	return map[string]any{
+		"payment_id":     payment.ID.String(),
+		"order_id":       payment.OrderID.String(),
+		"payment_status": payment.PaymentStatus,
+		"paid_at":        payment.PaidAt,
+	}, nil
+}
 
-					if err := tx.Model(&wallet).Updates(map[string]any{
-						"balance":        balanceAfter,
-						"total_earnings": wallet.TotalEarnings + earningAmount,
-					}).Error; err != nil {
-						return err
-					}
+func (s *orderService) HandleMidtransWebhook(ctx context.Context, req dto.MidtransWebhookRequest) (any, error) {
+	paymentID, err := uuid.Parse(req.OrderID)
+	if err != nil {
+		return nil, http_error.BAD_REQUEST_ERROR
+	}
 
-					txDesc := fmt.Sprintf("Pendapatan jasa dari Order %s", order.OrderNumber)
-					walletTx := entity.WalletTransaction{
-						WalletID:      wallet.ID,
-						OrderID:       &order.ID,
-						Type:          entity.WalletTxTypeEarning,
-						Amount:        payment.Amount,
-						BalanceBefore: balanceBefore,
-						BalanceAfter:  balanceAfter,
-						Description:   &txDesc,
-						ReferenceID:   payment.TransactionRef,
-						Status:        entity.WalletTxStatusCompleted,
-						CompletedAt:   &now,
-					}
-					if err := tx.Create(&walletTx).Error; err != nil {
-						return err
-					}
-				}
-			}
+	var payment entity.Payment
+	if err := s.db.WithContext(ctx).First(&payment, "id = ?", paymentID).Error; err != nil {
+		return nil, err
+	}
+
+	serverKey := s.env.GetMidtransServerKey()
+	expectedSignature := req.SignatureKey
+	payloadToHash := req.OrderID + req.StatusCode + req.GrossAmount + serverKey
+	hasher := sha512.New()
+	hasher.Write([]byte(payloadToHash))
+	calculatedSignature := hex.EncodeToString(hasher.Sum(nil))
+
+	if calculatedSignature != expectedSignature {
+		return nil, errors.New("invalid signature key")
+	}
+
+	if payment.PaymentStatus == entity.PaymentStatusPaid {
+		return map[string]any{
+			"payment_id":     payment.ID.String(),
+			"order_id":       payment.OrderID.String(),
+			"payment_status": string(payment.PaymentStatus),
+			"paid_at":        payment.PaidAt,
+		}, nil
+	}
+
+	now := time.Now()
+	txStatus := req.TransactionStatus
+	fraudStatus := req.FraudStatus
+
+	isPaid := false
+	isFailed := false
+
+	if txStatus == "capture" {
+		if fraudStatus == "challenge" {
+			// keep pending
+		} else if fraudStatus == "accept" {
+			isPaid = true
+		}
+	} else if txStatus == "settlement" {
+		isPaid = true
+	} else if txStatus == "cancel" || txStatus == "deny" || txStatus == "expire" {
+		isFailed = true
+	}
+
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if isPaid {
+			return s.processPaymentSuccess(tx, &payment, now, req.OrderID, true)
+		} else if isFailed {
+			payment.PaymentStatus = entity.PaymentStatusRefunded
+			payment.PaidAt = &now
+			return tx.Save(&payment).Error
 		}
 		return nil
 	})
@@ -705,7 +923,107 @@ func (s *orderService) SandboxCallback(ctx context.Context, req dto.SandboxPayme
 	return map[string]any{
 		"payment_id":     payment.ID.String(),
 		"order_id":       payment.OrderID.String(),
-		"payment_status": payment.PaymentStatus,
+		"payment_status": string(payment.PaymentStatus),
+		"paid_at":        payment.PaidAt,
+	}, nil
+}
+
+func (s *orderService) SyncMidtransPayment(ctx context.Context, orderID string) (any, error) {
+	ordID, err := uuid.Parse(orderID)
+	if err != nil {
+		return nil, http_error.BAD_REQUEST_ERROR
+	}
+
+	var payment entity.Payment
+	if err := s.db.WithContext(ctx).First(&payment, "order_id = ? AND payment_status = ?", ordID, entity.PaymentStatusPending).Error; err != nil {
+		if err := s.db.WithContext(ctx).Order("created_at DESC").First(&payment, "order_id = ?", ordID).Error; err != nil {
+			return nil, err
+		}
+		if payment.PaymentStatus != entity.PaymentStatusPending {
+			return map[string]any{
+				"payment_id":     payment.ID.String(),
+				"order_id":       payment.OrderID.String(),
+				"payment_status": string(payment.PaymentStatus),
+				"paid_at":        payment.PaidAt,
+			}, nil
+		}
+	}
+
+	serverKey := s.env.GetMidtransServerKey()
+	if serverKey == "" {
+		return nil, errors.New("MIDTRANS_SERVER_KEY is not configured")
+	}
+
+	url := s.getMidtransStatusURL(payment.ID.String())
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	auth := base64.StdEncoding.EncodeToString([]byte(serverKey + ":"))
+	req.Header.Set("Authorization", "Basic "+auth)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("midtrans error: status %d, body: %s", resp.StatusCode, string(respBody))
+	}
+
+	var statusResp struct {
+		TransactionStatus string `json:"transaction_status"`
+		FraudStatus       string `json:"fraud_status"`
+		StatusCode        string `json:"status_code"`
+		GrossAmount       string `json:"gross_amount"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&statusResp); err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	txStatus := statusResp.TransactionStatus
+	fraudStatus := statusResp.FraudStatus
+
+	isPaid := false
+	isFailed := false
+
+	if txStatus == "capture" {
+		if fraudStatus == "accept" {
+			isPaid = true
+		}
+	} else if txStatus == "settlement" {
+		isPaid = true
+	} else if txStatus == "cancel" || txStatus == "deny" || txStatus == "expire" {
+		isFailed = true
+	}
+
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if isPaid {
+			return s.processPaymentSuccess(tx, &payment, now, payment.ID.String(), true)
+		} else if isFailed {
+			payment.PaymentStatus = entity.PaymentStatusRefunded
+			payment.PaidAt = &now
+			return tx.Save(&payment).Error
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]any{
+		"payment_id":     payment.ID.String(),
+		"order_id":       payment.OrderID.String(),
+		"payment_status": string(payment.PaymentStatus),
 		"paid_at":        payment.PaidAt,
 	}, nil
 }

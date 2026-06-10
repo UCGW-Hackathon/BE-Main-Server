@@ -36,10 +36,10 @@ func NewServicesProvider(repoProvider RepositoriesProvider, configProvider Confi
 	categoryService := services.NewCategoryService(db)
 	workerPublicService := services.NewWorkerPublicService(db)
 	homeService := services.NewHomeService(db, categoryService, workerPublicService)
-	orderService := services.NewOrderService(db)
+	orderService := services.NewOrderService(db, configProvider.ProvideEnvConfig())
 	knowledgeService := services.NewKnowledgeService(db)
 	notificationService := services.NewNotificationService(db)
-	workerService := services.NewWorkerService(db)
+	workerService := services.NewWorkerService(db, configProvider.ProvideEnvConfig())
 	return &servicesProvider{
 		connectionService:   connectionService,
 		authService:         authService,

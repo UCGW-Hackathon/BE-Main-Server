@@ -2259,11 +2259,12 @@ Authorization: Bearer <access_token>
   "data": {
     "payment_id": "pay-001",
     "order_id": "ord-001",
+    "invoice_id": "inv-001",
     "amount": 225000,
-    "payment_method": "cash",
-    "payment_status": "paid",
-    "paid_at": "2023-10-25T11:45:00Z",
-    "receipt_url": null
+    "payment_status": "pending",
+    "token": "snap-token-xyz-123",
+    "redirect_url": "https://app.sandbox.midtrans.com/snap/v2/vtweb/snap-token-xyz-123",
+    "created_at": "2023-10-25T11:45:00Z"
   }
 }
 ```
@@ -2281,6 +2282,29 @@ Authorization: Bearer <access_token>
 ```
 Content-Type: application/pdf
 Content-Disposition: attachment; filename="INV-20231025-001.pdf"
+```
+
+---
+
+### 12.4 `POST /orders/{order_id}/payment/sync`
+
+> Pull the latest payment status from Midtrans Sandbox for a given order and update local database status.
+
+🔒 **Auth Required** — Role: `user`
+
+**Response `200 OK`:**
+
+```json
+{
+  "status": "success",
+  "message": "Status pembayaran berhasil disinkronisasi",
+  "data": {
+    "payment_id": "pay-001",
+    "order_id": "ord-001",
+    "payment_status": "paid",
+    "paid_at": "2023-10-25T11:45:00Z"
+  }
+}
 ```
 
 ---
