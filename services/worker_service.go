@@ -412,36 +412,135 @@ func (s *workerService) GenerateInvoice(ctx context.Context, orderID string, req
 	if err != nil {
 		return nil, err
 	}
-	var purchases []entity.Purchase
-	_ = s.db.WithContext(ctx).Where("order_id = ? AND status = ?", order.ID, entity.PurchaseStatusApproved).Find(&purchases).Error
-	materialTotal := 0
-	for _, purchase := range purchases {
-		materialTotal += purchase.TotalPrice
+
+	baseServiceFee := 0
+	if req.BaseServiceFee != nil {
+		baseServiceFee = *req.BaseServiceFee
+	} else if order.BaseServiceFee != nil {
+		baseServiceFee = *order.BaseServiceFee
 	}
-	grandTotal := req.BaseServiceFee + materialTotal + order.BookingFee
-	invoice := entity.Invoice{
-		OrderID:              order.ID,
-		InvoiceNumber:        fmt.Sprintf("INV-%s", order.OrderNumber),
-		BaseServiceFee:       req.BaseServiceFee,
-		TotalMaterialCost:    materialTotal,
-		BookingFee:           order.BookingFee,
-		GrandTotal:           grandTotal,
-		WorkerNotes:          req.WorkerNotes,
-		AllPurchasesApproved: true,
-	}
+
+	var invoice entity.Invoice
+	var materialTotal int
+
 	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var processedIDs []uuid.UUID
+
+		// 1. Process purchases
+		for _, item := range req.Purchases {
+			var pID uuid.UUID
+			var isNew bool
+
+			if item.PurchaseID != nil && *item.PurchaseID != "" && *item.PurchaseID != "optional" {
+				parsed, parseErr := uuid.Parse(*item.PurchaseID)
+				if parseErr == nil {
+					pID = parsed
+				} else {
+					isNew = true
+				}
+			} else {
+				isNew = true
+			}
+
+			purchase := entity.Purchase{
+				OrderID:    order.ID,
+				WorkerID:   workerID,
+				ItemName:   item.ItemName,
+				Category:   entity.PurchaseCategory(item.Category),
+				Quantity:   item.Quantity,
+				Unit:       item.Unit,
+				UnitPrice:  item.UnitPrice,
+				TotalPrice: item.TotalPrice,
+				Reason:     item.Reason,
+				Status:     entity.PurchaseStatusApproved,
+			}
+			if purchase.TotalPrice == 0 {
+				purchase.TotalPrice = int(purchase.Quantity * float64(purchase.UnitPrice))
+			}
+
+			if isNew {
+				purchase.ID = uuid.New()
+				if err := tx.Create(&purchase).Error; err != nil {
+					return err
+				}
+				pID = purchase.ID
+			} else {
+				purchase.ID = pID
+				// Update existing
+				if err := tx.Model(&entity.Purchase{}).Where("id = ? AND order_id = ?", pID, order.ID).Updates(map[string]any{
+					"item_name":   purchase.ItemName,
+					"category":    purchase.Category,
+					"quantity":    purchase.Quantity,
+					"unit":        purchase.Unit,
+					"unit_price":  purchase.UnitPrice,
+					"total_price": purchase.TotalPrice,
+					"reason":      purchase.Reason,
+					"status":      entity.PurchaseStatusApproved,
+				}).Error; err != nil {
+					return err
+				}
+			}
+			processedIDs = append(processedIDs, pID)
+		}
+
+		// 2. Delete purchases that were removed on frontend
+		if len(processedIDs) > 0 {
+			if err := tx.Where("order_id = ? AND id NOT IN ?", order.ID, processedIDs).Delete(&entity.Purchase{}).Error; err != nil {
+				return err
+			}
+		} else {
+			if err := tx.Where("order_id = ?", order.ID).Delete(&entity.Purchase{}).Error; err != nil {
+				return err
+			}
+		}
+
+		// 3. Sum approved purchases to compute actual total material cost
+		var currentPurchases []entity.Purchase
+		if err := tx.Where("order_id = ? AND status = ?", order.ID, entity.PurchaseStatusApproved).Find(&currentPurchases).Error; err != nil {
+			return err
+		}
+
+		materialTotal = 0
+		for _, cp := range currentPurchases {
+			materialTotal += cp.TotalPrice
+		}
+
+		// 4. Calculate grand total
+		grandTotal := baseServiceFee + materialTotal + order.BookingFee + order.TotalAdditionalCost
+
+		// 5. Upsert invoice record
+		invoice = entity.Invoice{
+			OrderID:              order.ID,
+			InvoiceNumber:        fmt.Sprintf("INV-%s", order.OrderNumber),
+			BaseServiceFee:       baseServiceFee,
+			TotalMaterialCost:    materialTotal,
+			BookingFee:           order.BookingFee,
+			TotalAdditionalCost:  order.TotalAdditionalCost,
+			GrandTotal:           grandTotal,
+			WorkerNotes:          req.WorkerNotes,
+			AllPurchasesApproved: true,
+		}
+
 		if err := tx.Where("order_id = ?", order.ID).Assign(invoice).FirstOrCreate(&invoice).Error; err != nil {
 			return err
 		}
+
+		// 6. Update order fields
 		return tx.Model(&entity.Order{}).Where("id = ?", order.ID).Updates(map[string]any{
-			"base_service_fee":    req.BaseServiceFee,
+			"base_service_fee":    baseServiceFee,
 			"total_material_cost": materialTotal,
 			"grand_total":         grandTotal,
 		}).Error
 	}); err != nil {
 		return nil, err
 	}
-	return map[string]any{"invoice_id": invoice.ID.String(), "order_id": order.ID.String(), "invoice_number": invoice.InvoiceNumber, "grand_total": invoice.GrandTotal}, nil
+
+	return map[string]any{
+		"invoice_id":     invoice.ID.String(),
+		"order_id":       order.ID.String(),
+		"invoice_number": invoice.InvoiceNumber,
+		"grand_total":    invoice.GrandTotal,
+	}, nil
 }
 
 func (s *workerService) AddPurchase(ctx context.Context, orderID string, req dto.WorkerPurchaseCreateRequest) (any, error) {

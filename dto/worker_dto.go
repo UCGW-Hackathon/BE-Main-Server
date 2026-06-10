@@ -33,8 +33,21 @@ type WorkerOrderStatusRequest struct {
 }
 
 type WorkerGenerateInvoiceRequest struct {
-	BaseServiceFee int     `json:"base_service_fee" binding:"required"`
-	WorkerNotes    *string `json:"worker_notes,omitempty"`
+	BaseServiceFee    *int                        `json:"base_service_fee,omitempty"`
+	WorkerNotes       *string                     `json:"worker_notes,omitempty"`
+	Purchases         []WorkerPurchaseInvoiceItem `json:"purchases,omitempty"`
+	TotalMaterialCost *int                        `json:"total_material_cost,omitempty"`
+}
+
+type WorkerPurchaseInvoiceItem struct {
+	PurchaseID *string  `json:"purchase_id,omitempty"`
+	ItemName   string   `json:"item_name" binding:"required"`
+	Category   string   `json:"category" binding:"required"`
+	Quantity   float64  `json:"quantity" binding:"required"`
+	Unit       string   `json:"unit" binding:"required"`
+	UnitPrice  int      `json:"unit_price" binding:"required"`
+	TotalPrice int      `json:"total_price" binding:"required"`
+	Reason     *string  `json:"reason,omitempty"`
 }
 
 type WorkerLocationUpdateRequest struct {

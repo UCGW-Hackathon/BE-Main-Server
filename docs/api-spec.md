@@ -3319,14 +3319,37 @@ in_progress → completed (requires invoice to be generated first)
 ```json
 {
   "base_service_fee": 150000,
-  "worker_notes": "Pekerjaan selesai. Pipa sudah tidak bocor. Disarankan pengecekan berkala setiap 6 bulan."
+  "worker_notes": "Pekerjaan selesai.",
+  "total_material_cost": 50000,
+  "purchases": [
+    {
+      "purchase_id": "optional",
+      "item_name": "Pipa PVC",
+      "category": "material",
+      "quantity": 2,
+      "unit": "meter",
+      "unit_price": 25000,
+      "total_price": 50000,
+      "reason": "Untuk mengganti pipa pecah"
+    }
+  ]
 }
 ```
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `base_service_fee` | integer | ✅ | Final service fee (Rupiah) |
+| `base_service_fee` | integer | ❌ | Final service fee (optional, defaults to order service fee) |
 | `worker_notes` | string | ❌ | Worker's final notes |
+| `total_material_cost` | integer | ❌ | Total material cost (optional) |
+| `purchases` | array | ❌ | List of materials used |
+| `purchases[].purchase_id` | string | ❌ | UUID of existing purchase or "optional"/empty for new |
+| `purchases[].item_name` | string | ✅ | Name of the material item |
+| `purchases[].category` | string | ✅ | Category of the purchase (e.g. "material") |
+| `purchases[].quantity` | number | ✅ | Quantity used |
+| `purchases[].unit` | string | ✅ | Unit of measurement |
+| `purchases[].unit_price` | integer | ✅ | Price per unit |
+| `purchases[].total_price` | integer | ✅ | Total price for the item |
+| `purchases[].reason` | string | ❌ | Reason for purchase |
 
 **Response `201 Created`:**
 

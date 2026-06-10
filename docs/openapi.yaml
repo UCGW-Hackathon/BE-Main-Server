@@ -1213,12 +1213,18 @@ paths:
     post:
       tags: [Worker Orders]
       summary: Generate Invoice
-      description: Lock material additions, freeze pricing, finalize receipt.
+      description: Save batch materials list, calculate total costs, freeze pricing, and generate invoice.
       parameters:
         - name: id
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateInvoiceInput'
       responses:
         '201':
           description: Invoice generated successfully
@@ -1685,3 +1691,24 @@ components:
         unit_price: { type: integer, example: 25000 }
         total_price: { type: integer, example: 50000 }
         reason: { type: string, example: Untuk mengganti pipa pecah }
+
+    GenerateInvoiceInput:
+      type: object
+      properties:
+        base_service_fee: { type: integer, example: 150000 }
+        worker_notes: { type: string, example: Pekerjaan selesai. }
+        total_material_cost: { type: integer, example: 50000 }
+        purchases:
+          type: array
+          items:
+            type: object
+            required: [item_name, category, quantity, unit, unit_price, total_price]
+            properties:
+              purchase_id: { type: string, example: optional }
+              item_name: { type: string, example: Pipa PVC }
+              category: { type: string, enum: [material, alat, sparepart, bahan_bangunan, biaya_tambahan, lainnya], example: material }
+              quantity: { type: number, example: 2 }
+              unit: { type: string, example: meter }
+              unit_price: { type: integer, example: 25000 }
+              total_price: { type: integer, example: 50000 }
+              reason: { type: string, example: Untuk mengganti pipa pecah }
