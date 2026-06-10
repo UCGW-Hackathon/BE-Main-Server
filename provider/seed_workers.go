@@ -28,10 +28,10 @@ func SeedWorkers(db *gorm.DB) error {
 // ─── WORKER USERS ─────────────────────────────────────────────────────────────
 
 // workerPasswordHash adalah bcrypt hash dari "Password123!" untuk semua seed worker
-const workerPasswordHash = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lh/y"
+const workerPasswordHash = "$2a$12$WO4ic2KVlSAUH9dpJMyhX.qyZ3LTVI9Cgkxu6FRkC/EL4Pvy7HLxu"
 
 // customerPasswordHash adalah bcrypt hash dari "Password123!" untuk semua seed user
-const customerPasswordHash = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lh/y"
+const customerPasswordHash = "$2a$12$WO4ic2KVlSAUH9dpJMyhX.qyZ3LTVI9Cgkxu6FRkC/EL4Pvy7HLxu"
 
 func seedWorkerUsers(db *gorm.DB) error {
 	jakartaLat := -6.2088

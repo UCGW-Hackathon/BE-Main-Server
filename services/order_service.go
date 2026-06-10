@@ -184,30 +184,52 @@ func (s *orderService) CancelOrder(ctx context.Context, orderID string, req dto.
 	if order.Status == entity.OrderStatusArrived ||
 		order.Status == entity.OrderStatusInProgress ||
 		order.Status == entity.OrderStatusCompleted {
-		return nil, http_error.INVALID_STATUS_TRANSITION
+		return nil, http_error.CANCEL_NOT_ALLOWED
+	}
+
+	var cancellationReason *string
+	if req.Notes != nil && *req.Notes != "" {
+		cancellationReason = req.Notes
+	} else if req.Reason != "" {
+		cancellationReason = &req.Reason
+	}
+
+	var cancellationCategory *string
+	if req.CancelReason != "" {
+		cancellationCategory = &req.CancelReason
+	} else if req.ReasonCategory != nil && *req.ReasonCategory != "" {
+		cancellationCategory = req.ReasonCategory
+	}
+
+	if (cancellationCategory == nil || *cancellationCategory == "") && (cancellationReason == nil || *cancellationReason == "") {
+		return nil, http_error.BAD_REQUEST_ERROR
 	}
 
 	now := time.Now()
 	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&entity.Order{}).Where("id = ?", order.ID).Updates(map[string]any{
 			"status":                entity.OrderStatusCancelled,
-			"cancellation_reason":   req.Reason,
-			"cancellation_category": req.ReasonCategory,
+			"cancellation_reason":   cancellationReason,
+			"cancellation_category": cancellationCategory,
 			"cancelled_by":          userID,
 			"cancelled_at":          &now,
 		}).Error; err != nil {
 			return err
 		}
-		return createTimeline(tx, order.ID, "cancelled", "Pesanan dibatalkan", &req.Reason, &userID, "user")
+		return createTimeline(tx, order.ID, "cancelled", "Pesanan dibatalkan", cancellationReason, &userID, "user")
 	}); err != nil {
 		return nil, err
 	}
 
 	return map[string]any{
-		"order_id":     order.ID.String(),
-		"order_number": order.OrderNumber,
-		"status":       entity.OrderStatusCancelled,
-		"cancelled_at": now,
+		"order_id":              order.ID.String(),
+		"order_number":          order.OrderNumber,
+		"status":                entity.OrderStatusCancelled,
+		"cancellation_fee":      0,
+		"refund_amount":         order.BookingFee,
+		"cancelled_at":          now,
+		"cancellation_reason":   cancellationReason,
+		"cancellation_category": cancellationCategory,
 	}, nil
 }
 

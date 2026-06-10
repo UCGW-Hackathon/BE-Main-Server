@@ -24,6 +24,7 @@ var (
 	VALIDATION_ERROR            = errors.New("Validation error")
 	INSUFFICIENT_BALANCE        = errors.New("Insufficient balance")
 	INVALID_STATUS_TRANSITION   = errors.New("Invalid status transition")
+	CANCEL_NOT_ALLOWED          = errors.New("Order cannot be cancelled at current status")
 	NOT_REGISTERED_TO_EVENT     = errors.New("Account is not registered to this event")
 	INVALID_OTP                 = errors.New("Invalid OTP Code")
 	ERR_PROBLEM_SET_NOT_FOUND   = errors.New("problem set not found")

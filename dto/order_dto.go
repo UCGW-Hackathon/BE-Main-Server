@@ -22,6 +22,9 @@ type OrderCreateRequest struct {
 }
 
 type OrderCancelRequest struct {
-	Reason         string  `json:"reason" binding:"required"`
+	CancelReason   string  `json:"cancel_reason"`
+	Notes          *string `json:"notes,omitempty"`
+	Reason         string  `json:"reason"`
 	ReasonCategory *string `json:"reason_category,omitempty"`
 }
+

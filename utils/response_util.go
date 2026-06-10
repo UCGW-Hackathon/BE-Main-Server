@@ -85,6 +85,9 @@ func resolveError(err error) (int, string, string) {
 	if errors.Is(err, http_error.INVALID_STATUS_TRANSITION) {
 		return http.StatusUnprocessableEntity, "INVALID_STATUS_TRANSITION", "Transisi status tidak valid"
 	}
+	if errors.Is(err, http_error.CANCEL_NOT_ALLOWED) {
+		return http.StatusUnprocessableEntity, "CANCEL_NOT_ALLOWED", "Pesanan tidak dapat dibatalkan karena worker sudah tiba di lokasi"
+	}
 	if errors.Is(err, http_error.TIMEOUT) {
 		return http.StatusGatewayTimeout, "TIMEOUT", "Request timed out"
 	}
