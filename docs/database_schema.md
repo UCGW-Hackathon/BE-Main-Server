@@ -119,7 +119,8 @@ CREATE TYPE order_status AS ENUM (
   'cancelled',
   'rejected',
   'waiting_payment',
-  'waiting_for_payment'
+  'waiting_for_payment',
+  'paid'
 );
 
 CREATE TYPE order_urgency AS ENUM ('normal', 'urgent');

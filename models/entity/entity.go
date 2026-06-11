@@ -26,6 +26,7 @@ const (
 	OrderStatusRejected         OrderStatus = "rejected"
 	OrderStatusWaitingPayment   OrderStatus = "waiting_payment"
 	OrderStatusWaitingForPayment OrderStatus = "waiting_for_payment"
+	OrderStatusPaid              OrderStatus = "paid"
 )
 
 type OrderUrgency string

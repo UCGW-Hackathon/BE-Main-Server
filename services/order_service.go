@@ -194,6 +194,7 @@ func (s *orderService) CancelOrder(ctx context.Context, orderID string, req dto.
 	if order.Status == entity.OrderStatusArrived ||
 		order.Status == entity.OrderStatusInProgress ||
 		order.Status == entity.OrderStatusCompleted ||
+		order.Status == entity.OrderStatusPaid ||
 		order.Status == entity.OrderStatusWaitingPayment ||
 		order.Status == entity.OrderStatusWaitingForPayment {
 		return nil, http_error.CANCEL_NOT_ALLOWED
@@ -672,7 +673,7 @@ func (s *orderService) processPaymentSuccess(tx *gorm.DB, payment *entity.Paymen
 	}
 
 	if err := tx.Model(&entity.Order{}).Where("id = ?", payment.OrderID).Updates(map[string]any{
-		"status":       entity.OrderStatusCompleted,
+		"status":       entity.OrderStatusPaid,
 		"completed_at": &now,
 	}).Error; err != nil {
 		return err

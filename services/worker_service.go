@@ -789,7 +789,7 @@ func (s *workerService) GetHistory(ctx context.Context) (any, error) {
 		return nil, err
 	}
 	var orders []entity.Order
-	if err := s.db.WithContext(ctx).Where("worker_id = ? AND status IN ?", workerID, []entity.OrderStatus{entity.OrderStatusCompleted, entity.OrderStatusCancelled, entity.OrderStatusRejected}).Order("created_at DESC").Find(&orders).Error; err != nil {
+	if err := s.db.WithContext(ctx).Where("worker_id = ? AND status IN ?", workerID, []entity.OrderStatus{entity.OrderStatusCompleted, entity.OrderStatusPaid, entity.OrderStatusCancelled, entity.OrderStatusRejected}).Order("created_at DESC").Find(&orders).Error; err != nil {
 		return nil, err
 	}
 	return map[string]any{"orders": NewOrderService(s.db, s.env).(*orderService).orderList(ctx, orders)}, nil
@@ -802,7 +802,7 @@ func (s *workerService) GetStatistics(ctx context.Context) (any, error) {
 	}
 	var completed int64
 	var earnings int64
-	_ = s.db.WithContext(ctx).Model(&entity.Order{}).Where("worker_id = ? AND status = ?", workerID, entity.OrderStatusCompleted).Count(&completed).Error
+	_ = s.db.WithContext(ctx).Model(&entity.Order{}).Where("worker_id = ? AND status IN ?", workerID, []entity.OrderStatus{entity.OrderStatusCompleted, entity.OrderStatusPaid}).Count(&completed).Error
 	_ = s.db.WithContext(ctx).Model(&entity.WalletTransaction{}).
 		Joins("JOIN worker_wallets ww ON ww.id = wallet_transactions.wallet_id").
 		Where("ww.worker_id = ? AND wallet_transactions.type = ? AND wallet_transactions.status = ?", workerID, entity.WalletTxTypeEarning, entity.WalletTxStatusCompleted).
@@ -973,7 +973,7 @@ func workerProfileResponse(user entity.User, profile entity.WorkerProfile, servi
 
 func isKnownOrderStatus(status entity.OrderStatus) bool {
 	switch status {
-	case entity.OrderStatusPending, entity.OrderStatusAccepted, entity.OrderStatusOnTheWay, entity.OrderStatusArrived, entity.OrderStatusInProgress, entity.OrderStatusWorkPaused, entity.OrderStatusCompleted, entity.OrderStatusCancelled, entity.OrderStatusRejected, entity.OrderStatusWaitingPayment, entity.OrderStatusWaitingForPayment:
+	case entity.OrderStatusPending, entity.OrderStatusAccepted, entity.OrderStatusOnTheWay, entity.OrderStatusArrived, entity.OrderStatusInProgress, entity.OrderStatusWorkPaused, entity.OrderStatusCompleted, entity.OrderStatusPaid, entity.OrderStatusCancelled, entity.OrderStatusRejected, entity.OrderStatusWaitingPayment, entity.OrderStatusWaitingForPayment:
 		return true
 	default:
 		return false

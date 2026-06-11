@@ -51,7 +51,7 @@ func (cfg *databaseConfig) EnsureSchema() error {
 	statements := []string{
 		`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`,
 		createEnumSQL("user_role", []string{"user", "worker", "admin"}),
-		createEnumSQL("order_status", []string{"pending", "accepted", "on_the_way", "arrived", "in_progress", "work_paused", "completed", "cancelled", "rejected", "waiting_payment", "waiting_for_payment"}),
+		createEnumSQL("order_status", []string{"pending", "accepted", "on_the_way", "arrived", "in_progress", "work_paused", "completed", "cancelled", "rejected", "waiting_payment", "waiting_for_payment", "paid"}),
 		createEnumSQL("order_urgency", []string{"normal", "urgent"}),
 		createEnumSQL("purchase_status", []string{"draft", "pending_approval", "approved", "rejected", "needs_clarification"}),
 		createEnumSQL("purchase_category", []string{"material", "alat", "sparepart", "bahan_bangunan", "biaya_tambahan", "lainnya"}),
@@ -70,6 +70,7 @@ func (cfg *databaseConfig) EnsureSchema() error {
 		`ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'waiting_for_payment'`,
 		`ALTER TYPE payment_status ADD VALUE IF NOT EXISTS 'waiting_payment'`,
 		`ALTER TYPE payment_status ADD VALUE IF NOT EXISTS 'waiting_for_payment'`,
+		`ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'paid'`,
 	}
 
 	for _, statement := range statements {
