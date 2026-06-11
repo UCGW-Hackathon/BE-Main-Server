@@ -338,7 +338,7 @@ func (s *workerService) RejectOrder(ctx context.Context, orderID string, req dto
 	if err := s.db.WithContext(ctx).Model(&entity.Order{}).Where("id = ?", order.ID).Updates(map[string]any{
 		"status":                entity.OrderStatusRejected,
 		"cancellation_reason":   req.Reason,
-		"cancellation_category": req.ReasonCategory,
+		"cancellation_category": req.RejectReason,
 		"cancelled_by":          workerID,
 		"cancelled_at":          &now,
 	}).Error; err != nil {

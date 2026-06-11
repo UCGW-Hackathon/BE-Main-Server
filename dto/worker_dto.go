@@ -21,8 +21,8 @@ type WorkerOrderAcceptRequest struct {
 }
 
 type WorkerOrderRejectRequest struct {
-	Reason         *string `json:"reason,omitempty"`
-	ReasonCategory string  `json:"reason_category" binding:"required"`
+	RejectReason string  `json:"reject_reason" binding:"required,oneof=busy too_far not_my_expertise personal other"`
+	Reason       *string `json:"reason,omitempty"`
 }
 
 type WorkerOrderStatusRequest struct {
