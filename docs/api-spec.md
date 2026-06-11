@@ -4462,7 +4462,7 @@ in_progress → completed (requires invoice to be generated first)
 
 ```yaml
 OrderStatus:
-  enum: [pending, accepted, on_the_way, arrived, in_progress, work_paused, completed, cancelled, rejected]
+  enum: [pending, accepted, on_the_way, arrived, in_progress, work_paused, completed, cancelled, rejected, waiting_payment, waiting_for_payment]
 
 PurchaseStatus:
   enum: [draft, pending_approval, approved, rejected, needs_clarification]
@@ -4480,7 +4480,7 @@ PaymentMethod:
   enum: [cash, bank_transfer, ewallet]
 
 PaymentStatus:
-  enum: [unpaid, pending, paid, refunded]
+  enum: [unpaid, pending, paid, refunded, waiting_payment, waiting_for_payment]
 
 Urgency:
   enum: [normal, urgent]

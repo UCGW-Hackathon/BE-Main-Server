@@ -193,7 +193,9 @@ func (s *orderService) CancelOrder(ctx context.Context, orderID string, req dto.
 	}
 	if order.Status == entity.OrderStatusArrived ||
 		order.Status == entity.OrderStatusInProgress ||
-		order.Status == entity.OrderStatusCompleted {
+		order.Status == entity.OrderStatusCompleted ||
+		order.Status == entity.OrderStatusWaitingPayment ||
+		order.Status == entity.OrderStatusWaitingForPayment {
 		return nil, http_error.CANCEL_NOT_ALLOWED
 	}
 

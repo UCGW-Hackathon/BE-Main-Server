@@ -45,6 +45,8 @@ func (s *userService) GetProfile(ctx context.Context) (any, error) {
 			entity.OrderStatusArrived,
 			entity.OrderStatusInProgress,
 			entity.OrderStatusWorkPaused,
+			entity.OrderStatusWaitingPayment,
+			entity.OrderStatusWaitingForPayment,
 		}).
 		Count(&activeOrders).Error
 

@@ -117,7 +117,9 @@ CREATE TYPE order_status AS ENUM (
   'work_paused',
   'completed',
   'cancelled',
-  'rejected'
+  'rejected',
+  'waiting_payment',
+  'waiting_for_payment'
 );
 
 CREATE TYPE order_urgency AS ENUM ('normal', 'urgent');
@@ -152,7 +154,7 @@ CREATE TYPE message_type AS ENUM ('text', 'image', 'system');
 
 CREATE TYPE payment_method AS ENUM ('cash', 'bank_transfer', 'ewallet');
 
-CREATE TYPE payment_status AS ENUM ('unpaid', 'pending', 'paid', 'refunded');
+CREATE TYPE payment_status AS ENUM ('unpaid', 'pending', 'paid', 'refunded', 'waiting_payment', 'waiting_for_payment');
 
 CREATE TYPE verification_status AS ENUM ('unverified', 'pending', 'verified', 'rejected');
 

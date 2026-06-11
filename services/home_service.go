@@ -45,6 +45,8 @@ func (s *homeService) GetUserHome(ctx context.Context, latitude float64, longitu
 			entity.OrderStatusArrived,
 			entity.OrderStatusInProgress,
 			entity.OrderStatusWorkPaused,
+			entity.OrderStatusWaitingPayment,
+			entity.OrderStatusWaitingForPayment,
 		}).
 		Order("created_at DESC").
 		First(&activeOrder).Error; err == nil {

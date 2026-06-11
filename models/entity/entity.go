@@ -21,9 +21,11 @@ const (
 	OrderStatusArrived    OrderStatus = "arrived"
 	OrderStatusInProgress OrderStatus = "in_progress"
 	OrderStatusWorkPaused OrderStatus = "work_paused"
-	OrderStatusCompleted  OrderStatus = "completed"
-	OrderStatusCancelled  OrderStatus = "cancelled"
-	OrderStatusRejected   OrderStatus = "rejected"
+	OrderStatusCompleted        OrderStatus = "completed"
+	OrderStatusCancelled        OrderStatus = "cancelled"
+	OrderStatusRejected         OrderStatus = "rejected"
+	OrderStatusWaitingPayment   OrderStatus = "waiting_payment"
+	OrderStatusWaitingForPayment OrderStatus = "waiting_for_payment"
 )
 
 type OrderUrgency string
@@ -84,10 +86,12 @@ const (
 type PaymentStatus string
 
 const (
-	PaymentStatusUnpaid   PaymentStatus = "unpaid"
-	PaymentStatusPending  PaymentStatus = "pending"
-	PaymentStatusPaid     PaymentStatus = "paid"
-	PaymentStatusRefunded PaymentStatus = "refunded"
+	PaymentStatusUnpaid            PaymentStatus = "unpaid"
+	PaymentStatusPending           PaymentStatus = "pending"
+	PaymentStatusPaid              PaymentStatus = "paid"
+	PaymentStatusRefunded          PaymentStatus = "refunded"
+	PaymentStatusWaitingPayment    PaymentStatus = "waiting_payment"
+	PaymentStatusWaitingForPayment PaymentStatus = "waiting_for_payment"
 )
 
 type VerificationStatus string

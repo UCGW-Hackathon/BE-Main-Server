@@ -51,14 +51,14 @@ func (cfg *databaseConfig) EnsureSchema() error {
 	statements := []string{
 		`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`,
 		createEnumSQL("user_role", []string{"user", "worker", "admin"}),
-		createEnumSQL("order_status", []string{"pending", "accepted", "on_the_way", "arrived", "in_progress", "work_paused", "completed", "cancelled", "rejected"}),
+		createEnumSQL("order_status", []string{"pending", "accepted", "on_the_way", "arrived", "in_progress", "work_paused", "completed", "cancelled", "rejected", "waiting_payment", "waiting_for_payment"}),
 		createEnumSQL("order_urgency", []string{"normal", "urgent"}),
 		createEnumSQL("purchase_status", []string{"draft", "pending_approval", "approved", "rejected", "needs_clarification"}),
 		createEnumSQL("purchase_category", []string{"material", "alat", "sparepart", "bahan_bangunan", "biaya_tambahan", "lainnya"}),
 		createEnumSQL("risk_flag_type", []string{"harga_tidak_wajar", "item_tidak_relevan", "data_tidak_lengkap", "nota_tidak_jelas", "duplikat", "alasan_tidak_lengkap"}),
 		createEnumSQL("message_type", []string{"text", "image", "system"}),
 		createEnumSQL("payment_method", []string{"cash", "bank_transfer", "ewallet"}),
-		createEnumSQL("payment_status", []string{"unpaid", "pending", "paid", "refunded"}),
+		createEnumSQL("payment_status", []string{"unpaid", "pending", "paid", "refunded", "waiting_payment", "waiting_for_payment"}),
 		createEnumSQL("verification_status", []string{"unverified", "pending", "verified", "rejected"}),
 		createEnumSQL("notification_type", []string{"order", "purchase", "chat", "promo", "system", "payment"}),
 		createEnumSQL("article_category", []string{"faq", "guide", "tips", "safety", "payment"}),
@@ -66,6 +66,10 @@ func (cfg *databaseConfig) EnsureSchema() error {
 		createEnumSQL("wallet_tx_type", []string{"earning", "withdrawal", "refund", "bonus", "fee"}),
 		createEnumSQL("wallet_tx_status", []string{"pending", "completed", "failed", "cancelled"}),
 		createEnumSQL("audit_action", []string{"created", "ai_processed", "submitted", "approved", "rejected", "clarification_requested", "clarification_responded", "edited", "deleted"}),
+		`ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'waiting_payment'`,
+		`ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'waiting_for_payment'`,
+		`ALTER TYPE payment_status ADD VALUE IF NOT EXISTS 'waiting_payment'`,
+		`ALTER TYPE payment_status ADD VALUE IF NOT EXISTS 'waiting_for_payment'`,
 	}
 
 	for _, statement := range statements {

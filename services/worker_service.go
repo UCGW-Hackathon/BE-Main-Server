@@ -253,7 +253,7 @@ func (s *workerService) GetHome(ctx context.Context) (any, error) {
 	_ = s.db.WithContext(ctx).First(&wallet, "worker_id = ?", workerID).Error
 	var incomingCount, activeCount int64
 	_ = s.db.WithContext(ctx).Model(&entity.Order{}).Where("worker_id = ? AND status = ?", workerID, entity.OrderStatusPending).Count(&incomingCount).Error
-	_ = s.db.WithContext(ctx).Model(&entity.Order{}).Where("worker_id = ? AND status IN ?", workerID, []entity.OrderStatus{entity.OrderStatusAccepted, entity.OrderStatusOnTheWay, entity.OrderStatusArrived, entity.OrderStatusInProgress}).Count(&activeCount).Error
+	_ = s.db.WithContext(ctx).Model(&entity.Order{}).Where("worker_id = ? AND status IN ?", workerID, []entity.OrderStatus{entity.OrderStatusAccepted, entity.OrderStatusOnTheWay, entity.OrderStatusArrived, entity.OrderStatusInProgress, entity.OrderStatusWaitingPayment, entity.OrderStatusWaitingForPayment}).Count(&activeCount).Error
 	return map[string]any{
 		"worker_summary": map[string]any{
 			"full_name":      user.FullName,
@@ -526,11 +526,16 @@ func (s *workerService) GenerateInvoice(ctx context.Context, orderID string, req
 		}
 
 		// 6. Update order fields
-		return tx.Model(&entity.Order{}).Where("id = ?", order.ID).Updates(map[string]any{
+		if err := tx.Model(&entity.Order{}).Where("id = ?", order.ID).Updates(map[string]any{
 			"base_service_fee":    baseServiceFee,
 			"total_material_cost": materialTotal,
 			"grand_total":         grandTotal,
-		}).Error
+			"status":              entity.OrderStatusWaitingPayment,
+		}).Error; err != nil {
+			return err
+		}
+
+		return createTimeline(tx, order.ID, string(entity.OrderStatusWaitingPayment), "Invoice Dibuat (Menunggu Pembayaran)", req.WorkerNotes, &workerID, "worker")
 	}); err != nil {
 		return nil, err
 	}
@@ -968,7 +973,7 @@ func workerProfileResponse(user entity.User, profile entity.WorkerProfile, servi
 
 func isKnownOrderStatus(status entity.OrderStatus) bool {
 	switch status {
-	case entity.OrderStatusPending, entity.OrderStatusAccepted, entity.OrderStatusOnTheWay, entity.OrderStatusArrived, entity.OrderStatusInProgress, entity.OrderStatusWorkPaused, entity.OrderStatusCompleted, entity.OrderStatusCancelled, entity.OrderStatusRejected:
+	case entity.OrderStatusPending, entity.OrderStatusAccepted, entity.OrderStatusOnTheWay, entity.OrderStatusArrived, entity.OrderStatusInProgress, entity.OrderStatusWorkPaused, entity.OrderStatusCompleted, entity.OrderStatusCancelled, entity.OrderStatusRejected, entity.OrderStatusWaitingPayment, entity.OrderStatusWaitingForPayment:
 		return true
 	default:
 		return false
