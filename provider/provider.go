@@ -3,6 +3,7 @@ package provider
 import (
 	"situkang/middleware"
 
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,6 +26,7 @@ type appProvider struct {
 
 func NewAppProvider() AppProvider {
 	ginRouter := gin.Default()
+	ginRouter.Use(gzip.Gzip(gzip.DefaultCompression))
 	ginRouter.Use(middleware.SecurityHeaders(), middleware.RateLimitHeaders(100))
 	ginRouter.Static("/uploads", "./uploads")
 	configProvider := NewConfigProvider()

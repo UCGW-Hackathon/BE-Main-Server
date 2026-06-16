@@ -181,12 +181,40 @@ func (s *workerPublicService) listWorkers(ctx context.Context, query string, lat
 		return nil, err
 	}
 
+	// Fetch all service names for the workers in a single query to avoid N+1 query problem
+	workerIDs := make([]uuid.UUID, 0, len(rows))
+	for _, row := range rows {
+		workerIDs = append(workerIDs, row.WorkerID)
+	}
+
+	workerServicesMap := make(map[uuid.UUID][]string)
+	if len(workerIDs) > 0 {
+		type serviceNameRow struct {
+			WorkerID uuid.UUID
+			Name     string
+		}
+		var sRows []serviceNameRow
+		if err := s.db.WithContext(ctx).Table("worker_services ws").
+			Select("ws.worker_id, s.name").
+			Joins("JOIN services s ON s.id = ws.service_id").
+			Where("ws.worker_id IN ? AND ws.is_active = TRUE AND s.is_active = TRUE", workerIDs).
+			Order("s.name ASC").
+			Scan(&sRows).Error; err == nil {
+			for _, r := range sRows {
+				workerServicesMap[r.WorkerID] = append(workerServicesMap[r.WorkerID], r.Name)
+			}
+		}
+	}
+
 	data := make([]map[string]any, 0, len(rows))
 	for _, row := range rows {
 		distance := distanceKm(latitude, longitude, row.Latitude, row.Longitude)
 		item := workerResponse(row, distance)
-		services, _ := s.GetServices(ctx, row.WorkerID.String())
-		item["services"] = serviceNames(services)
+		names := workerServicesMap[row.WorkerID]
+		if names == nil {
+			names = []string{}
+		}
+		item["services"] = names
 		data = append(data, item)
 	}
 

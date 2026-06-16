@@ -5,7 +5,6 @@ import (
 	"situkang/models/entity"
 	"situkang/provider"
 
-	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,7 +28,6 @@ func ConnectionRouter(router *gin.Engine, controller provider.ControllerProvider
 	router.StaticFile("/swagger", "./docs/index.html")
 
 	api := router.Group("/v1")
-	api.Use(gzip.Gzip(gzip.DefaultCompression))
 	{
 		api.POST("/connect", connectionController.Connect)
 	}
