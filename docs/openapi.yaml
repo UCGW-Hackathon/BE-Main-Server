@@ -6,8 +6,8 @@ info:
     Authentication is handled via RBAC with JWT access tokens.
   version: 1.0.0
 servers:
-  - url: https://xryz-gcw-situkang.hf.space/v1
-    description: Production Server (Hugging Face)
+  - url: http://situkang-api-20260616.eastasia.azurecontainer.io:7860/v1
+    description: Production Server (Azure Container Instances)
   - url: http://localhost:8080/v1
     description: Local Development Server
 

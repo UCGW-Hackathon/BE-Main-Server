@@ -13,6 +13,7 @@ type ServicesProvider interface {
 	ProvideKnowledgeService() services.KnowledgeService
 	ProvideNotificationService() services.NotificationService
 	ProvideWorkerService() services.WorkerService
+	ProvideFileService() services.FileService
 }
 
 type servicesProvider struct {
@@ -26,6 +27,7 @@ type servicesProvider struct {
 	knowledgeService    services.KnowledgeService
 	notificationService services.NotificationService
 	workerService       services.WorkerService
+	fileService         services.FileService
 }
 
 func NewServicesProvider(repoProvider RepositoriesProvider, configProvider ConfigProvider) ServicesProvider {
@@ -40,6 +42,7 @@ func NewServicesProvider(repoProvider RepositoriesProvider, configProvider Confi
 	knowledgeService := services.NewKnowledgeService(db)
 	notificationService := services.NewNotificationService(db)
 	workerService := services.NewWorkerService(db, configProvider.ProvideEnvConfig())
+	fileService := services.NewFileService(db, configProvider.ProvideEnvConfig())
 	return &servicesProvider{
 		connectionService:   connectionService,
 		authService:         authService,
@@ -51,6 +54,7 @@ func NewServicesProvider(repoProvider RepositoriesProvider, configProvider Confi
 		knowledgeService:    knowledgeService,
 		notificationService: notificationService,
 		workerService:       workerService,
+		fileService:         fileService,
 	}
 }
 
@@ -92,4 +96,8 @@ func (s *servicesProvider) ProvideNotificationService() services.NotificationSer
 
 func (s *servicesProvider) ProvideWorkerService() services.WorkerService {
 	return s.workerService
+}
+
+func (s *servicesProvider) ProvideFileService() services.FileService {
+	return s.fileService
 }

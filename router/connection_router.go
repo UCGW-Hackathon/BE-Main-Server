@@ -19,6 +19,7 @@ func ConnectionRouter(router *gin.Engine, controller provider.ControllerProvider
 	knowledgeController := controller.ProvideKnowledgeController()
 	notificationController := controller.ProvideNotificationController()
 	workerController := controller.ProvideWorkerController()
+	fileController := controller.ProvideFileController()
 
 	// Swagger UI and OpenAPI documentation routes
 	router.StaticFile("/docs/openapi.yaml", "./docs/openapi.yaml")
@@ -67,6 +68,10 @@ func ConnectionRouter(router *gin.Engine, controller provider.ControllerProvider
 		authenticated.GET("/notifications", notificationController.ListNotifications)
 		authenticated.PATCH("/notifications/:notification_id/read", notificationController.MarkRead)
 		authenticated.PATCH("/notifications/read-all", notificationController.MarkAllRead)
+
+		// File upload & retrieval routes
+		authenticated.POST("/upload/:category", fileController.Upload)
+		authenticated.GET("/files", fileController.GetFiles)
 	}
 
 	userOnly := api.Group("/")

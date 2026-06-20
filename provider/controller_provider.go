@@ -13,6 +13,7 @@ type ControllerProvider interface {
 	ProvideKnowledgeController() controllers.KnowledgeController
 	ProvideNotificationController() controllers.NotificationController
 	ProvideWorkerController() controllers.WorkerController
+	ProvideFileController() controllers.FileController
 }
 
 type controllerProvider struct {
@@ -26,6 +27,7 @@ type controllerProvider struct {
 	knowledgeController    controllers.KnowledgeController
 	notificationController controllers.NotificationController
 	workerController       controllers.WorkerController
+	fileController         controllers.FileController
 }
 
 func NewControllerProvider(servicesProvider ServicesProvider) ControllerProvider {
@@ -40,6 +42,7 @@ func NewControllerProvider(servicesProvider ServicesProvider) ControllerProvider
 	knowledgeController := controllers.NewKnowledgeController(servicesProvider.ProvideKnowledgeService())
 	notificationController := controllers.NewNotificationController(servicesProvider.ProvideNotificationService())
 	workerController := controllers.NewWorkerController(servicesProvider.ProvideWorkerService())
+	fileController := controllers.NewFileController(servicesProvider.ProvideFileService())
 	return &controllerProvider{
 		connectionController:   connectionController,
 		authController:         authController,
@@ -51,6 +54,7 @@ func NewControllerProvider(servicesProvider ServicesProvider) ControllerProvider
 		knowledgeController:    knowledgeController,
 		notificationController: notificationController,
 		workerController:       workerController,
+		fileController:         fileController,
 	}
 }
 
@@ -92,4 +96,8 @@ func (c *controllerProvider) ProvideNotificationController() controllers.Notific
 
 func (c *controllerProvider) ProvideWorkerController() controllers.WorkerController {
 	return c.workerController
+}
+
+func (c *controllerProvider) ProvideFileController() controllers.FileController {
+	return c.fileController
 }
